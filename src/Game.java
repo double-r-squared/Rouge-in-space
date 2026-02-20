@@ -1086,7 +1086,8 @@ public class Game {
         // If either file is missing, fall back — no animation
         if (normal == null || negative == null) return;
 
-        try {
+        //
+        try { // TODO: add logic for the monster fade in with lots of frames
             // Frame 1 — normal sprite
             renderSprite(normal);
             Thread.sleep(250);
