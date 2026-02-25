@@ -195,19 +195,13 @@ class Flashbang extends Weapon {
 class LaserGun extends Weapon {
     public LaserGun() {
         // range = -1 sentinel; Game substitutes player sight at fire time
-        super("Laser Gun", 'L', 20, 0.78, 4.0, WeaponType.RANGED, 10);
+        super("Laser Gun", 'L', 20, 0.78, 4.0, WeaponType.RANGED, 12);
     }
 }
 
 class RayGun extends Weapon {
     public RayGun() {
-       super("Ray Gun", "F", 40, 0.25, 10.0, WeaponType.RANGED, -1);
-    }
-}
-
-class Pistonl extends Weapon {
-    public Pistol() {
-        super("Pistol", "f", 5, 0.96, 2.0, WeaponType.Ranged, 5);
+       super("Ray Gun", 'F', 40, 0.25, 10.0, WeaponType.RANGED, -1);
     }
 }
 
