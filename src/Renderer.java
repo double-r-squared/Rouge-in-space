@@ -147,14 +147,14 @@ public class Renderer {
         }
 
         File[] files = folder.listFiles((dir, name) -> 
-            name.matches(enemyName.toLowerCase() + "-\\d{3}\\.txt"));
+            name.matches(enemyName.toLowerCase() + "_\\d{3}\\.txt"));
 
         if (files == null || files.length == 0) {
             return false;
         }
 
         // Sort files numerically
-        java.util.Arrays.sort(files, (f1, f2) -> f1.getName().compareTo(f2.getName()));
+        java.util.Arrays.sort(files, Collections.reverseOrder());
 
         try {
             for (File file : files) {
