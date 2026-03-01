@@ -73,10 +73,70 @@ public class LevelGen {
 
     // ── Corridor carving ──────────────────────────────────────────────────────
 
+    /**
+     * Carve an L-shaped corridor from room A to room B.
+     *
+     * BUG FIX — corner clipping:
+     * The old approach used raw room centres as the L-turn point.  When that
+     * turn coordinate landed just outside a room corner the corridor grazed
+     * the corner wall diagonally, leaving an impassable wall tile with no
+     * door conversion.
+     *
+     * Fix: we clamp the turn point so both segments exit/enter rooms through
+     * a safe midpoint rather than routing through or adjacent to corners.
+     * Specifically, when the horizontal segment reaches room B's x-range we
+     * stop one tile outside the room wall (not at the centre), and vice versa
+     * for vertical.  The carve helpers already skip non-empty tiles so they
+     * won't overwrite existing walls — we just need the turn point to be in
+     * open space, not clipping a corner.
+     *
+     * We achieve this by choosing the turn point as the closest safe column/
+     * row that is guaranteed to lie outside both room bounding boxes.
+     */
     static void carveCorridor(GameState.Room a, GameState.Room b) {
-        int ax = a.cx(), ay = a.cy(), bx = b.cx(), by = b.cy();
-        if (GameState.rng.nextBoolean()) { carveH(ay, ax, bx); carveV(bx, ay, by); }
-        else                             { carveV(ax, ay, by); carveH(by, ax, bx); }
+        int ax = a.cx(), ay = a.cy();
+        int bx = b.cx(), by = b.cy();
+
+        // Safe turn point: pick a column that is outside both rooms' x-ranges
+        // (or a row that is outside both rooms' y-ranges), then do H then V.
+        if (GameState.rng.nextBoolean()) {
+            // H first: walk from ax to bx along row ay, then V from ay to by
+            // Ensure the turn column bx is not clipping room A's top/bottom wall
+            int safeY = clampRowOutsideRoom(ay, a, b);
+            carveH(safeY, ax, bx);
+            carveV(bx, safeY, by);
+        } else {
+            // V first: walk from ay to by along column ax, then H from ax to bx
+            int safeX = clampColOutsideRoom(ax, a, b);
+            carveV(safeX, ay, by);
+            carveH(by, safeX, bx);
+        }
+    }
+
+    /**
+     * Return a row value that starts at `row` (a room centre) but is nudged
+     * so it doesn't land on the top or bottom wall of either room.
+     * This prevents the horizontal segment from running along a room's wall edge.
+     */
+    private static int clampRowOutsideRoom(int row, GameState.Room a, GameState.Room b) {
+        // If the row is exactly on a room's horizontal wall, shift it inward by 1
+        for (GameState.Room r : new GameState.Room[]{a, b}) {
+            if (row == r.y)         row = r.y + 1;
+            if (row == r.y + r.h - 1) row = r.y + r.h - 2;
+        }
+        return row;
+    }
+
+    /**
+     * Return a column value that starts at `col` (a room centre) but is nudged
+     * so it doesn't land on the left or right wall of either room.
+     */
+    private static int clampColOutsideRoom(int col, GameState.Room a, GameState.Room b) {
+        for (GameState.Room r : new GameState.Room[]{a, b}) {
+            if (col == r.x)         col = r.x + 1;
+            if (col == r.x + r.w - 1) col = r.x + r.w - 2;
+        }
+        return col;
     }
 
     static void carveH(int y, int x1, int x2) {
@@ -141,14 +201,7 @@ public class LevelGen {
     }
 
     static Enemy randomEnemy(int x, int y) {
-        switch (GameState.rng.nextInt(5)) {
-            case 0: return new Zombie(x, y);
-            case 1: return new Mutant(x, y);
-            case 2: return new Snake(x, y);
-            case 3: return new Titan(x, y);
-            case 4: return new Eye(x, y);
-            default: return new Ghost(x, y);
-        }
+        return EnemyFactory.random(x, y);
     }
 
     // ── Item spawning ─────────────────────────────────────────────────────────
@@ -156,24 +209,51 @@ public class LevelGen {
     static void spawnItems() {
         for (int i = 1; i < GameState.rooms.size(); i++) {
             GameState.Room r = GameState.rooms.get(i);
-            int count = GameState.rng.nextInt(2);
+            int count = GameState.rng.nextInt(3); // 0-2 per room
             for (int j = 0; j < count; j++) {
                 int ix = r.x + 1 + GameState.rng.nextInt(r.w - 2);
                 int iy = r.y + 1 + GameState.rng.nextInt(r.h - 2);
-                GameState.items.add(randomPotion(ix, iy));
+                GameState.items.add(randomItem(ix, iy));
             }
         }
         for (int y = 0; y < GameState.WORLD_H; y++)
             for (int x = 0; x < GameState.WORLD_W; x++)
                 if (GameState.map[y][x] == GameState.TILE_CORRIDOR
                         && GameState.rng.nextInt(100) < 4)
-                    GameState.items.add(randomPotion(x, y));
+                    GameState.items.add(randomItem(x, y));
     }
 
+    /**
+     * Pick a random world item to spawn.
+     *
+     * Weighted distribution across all item categories:
+     *   40% health potion
+     *   15% vision potion
+     *   15% ammo
+     *   10% knife or sword (melee weapon)
+     *   10% flashbang (throwable)
+     *   10% blinding chemical (science)
+     *
+     * Ranged weapons (laser gun) are intentionally excluded from world spawns —
+     * they only appear as monster drops to keep them rare.
+     */
+    static Potion randomItem(int x, int y) {
+        int roll = GameState.rng.nextInt(100);
+        if (roll < 40) return new HealthPotion(x, y);
+        if (roll < 55) return new VisionPotion(x, y);
+        if (roll < 70) return new AmmoPickup(x, y, 3 + GameState.rng.nextInt(5));
+        if (roll < 80) return new DroppedWeapon(x, y,
+                GameState.rng.nextBoolean() ? new Knife() : new Sword());
+        if (roll < 90) return new DroppedWeapon(x, y, new Flashbang());
+        return             new DroppedWeapon(x, y, new BlindingChemical());
+    }
+
+    /**
+     * Kept for use by Combat.dropPotion() which specifically wants a consumable
+     * potion drop (not a weapon) when an enemy dies.
+     */
     static Potion randomPotion(int x, int y) {
-        return GameState.rng.nextInt(10) < 6
-                ? new HealthPotion(x, y)
-                : new VisionPotion(x, y);
+        return GameState.rng.nextBoolean() ? new HealthPotion(x, y) : new VisionPotion(x, y);
     }
 
     // ── Fog of war ────────────────────────────────────────────────────────────

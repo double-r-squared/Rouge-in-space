@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Potion  –  abstract base class for all consumable items
+// TODO: THIS SHOULD BE ITEM NOT POTION
 //
 // Blueprint for any potion in the game.  Subclasses must define:
 //   • glyph       – the character rendered on the map  ('d' or 'b')
@@ -95,7 +96,7 @@ class AmmoPickup extends Potion {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DroppedWeapon  –  glyph '!'
+// DroppedWeapon  –  glyph is weapon specific
 // A weapon lying on the floor.  Pressing E picks it up into inventory.
 // ─────────────────────────────────────────────────────────────────────────────
 class DroppedWeapon extends Potion {

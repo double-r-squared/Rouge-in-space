@@ -16,6 +16,12 @@ import java.io.File;
 // ─────────────────────────────────────────────────────────────────────────────
 public class Renderer {
 
+    // ── Overlay ───────────────────────────────────────────────────────────────
+    // We want to load the border overlay over the rendered map so the border appears around the game view,
+    // i want to make the boarder a txt file and each line should be as long as the VIEW_W
+
+
+
     // ── Main render ───────────────────────────────────────────────────────────
 
     static void render() {

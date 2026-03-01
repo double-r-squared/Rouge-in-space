@@ -64,8 +64,9 @@ public class Combat {
         }
     }
 
+    /** XP reward is defined per-monster in the DB, not derived from stats. */
     static int xpReward(Enemy e) {
-        return e.getMaxHealth() / 4 + 5;
+        return EnemyFactory.xpValueFor(e.getName());
     }
 
     // ── Enemy turn ────────────────────────────────────────────────────────────
@@ -98,39 +99,61 @@ public class Combat {
 
     // ── Drop tables ───────────────────────────────────────────────────────────
 
+    /**
+     * Roll for item drop on enemy death.
+     *
+     * The drop_table column in monsters.db maps each monster to a loot
+     * behaviour key.  Adding a new monster only requires a DB row — no
+     * Java changes needed here.
+     *
+     * Drop table keys:
+     *   zombie   – mostly potions, some melee, some ammo
+     *   mutant   – mostly melee, some potions, some throwables
+     *   ghost    – chemicals only
+     *   skeleton – mostly ammo, some ranged, some potions
+     *   titan    – mostly ranged, some melee, some potions
+     *   eye      – mostly chemicals, some potions
+     *   snake    – mostly ammo, some potions
+     *   default  – equal split potion / ammo
+     */
     static void rollDrop(Enemy e) {
         int threshold = (GameState.player.getPlayerClass() == PlayerClass.PILOT) ? 50 : 35;
         if (GameState.rng.nextInt(100) >= threshold) return;
 
-        int ex = e.getWorldX(), ey = e.getWorldY();
-        int roll = GameState.rng.nextInt(100);
+        int    ex        = e.getWorldX(), ey = e.getWorldY();
+        int    roll      = GameState.rng.nextInt(100);
+        String dropTable = EnemyFactory.dropTableFor(e.getName());
 
-        switch (e.getName()) {
-            case "Zombie":
+        switch (dropTable) {
+            case "zombie":
                 if (roll < 70)      dropPotion(ex, ey);
                 else if (roll < 85) dropWeapon(ex, ey, "melee");
                 else                dropAmmo(ex, ey);
                 break;
-            case "Mutant":
+            case "mutant":
                 if (roll < 65)      dropWeapon(ex, ey, "melee");
                 else if (roll < 85) dropPotion(ex, ey);
                 else                dropWeapon(ex, ey, "throwable");
                 break;
-            case "Ghost":
+            case "ghost":
                 dropWeapon(ex, ey, "chemical");
                 break;
-            case "Skeleton":
+            case "skeleton":
                 if (roll < 50)      dropAmmo(ex, ey);
                 else if (roll < 80) dropWeapon(ex, ey, "ranged");
                 else                dropPotion(ex, ey);
                 break;
-            case "Titan":
+            case "titan":
                 if (roll < 60)      dropWeapon(ex, ey, "ranged");
                 else if (roll < 85) dropWeapon(ex, ey, "melee");
                 else                dropPotion(ex, ey);
                 break;
-            case "Eye":
+            case "eye":
                 if (roll < 70)      dropWeapon(ex, ey, "chemical");
+                else                dropPotion(ex, ey);
+                break;
+            case "snake":
+                if (roll < 60)      dropAmmo(ex, ey);
                 else                dropPotion(ex, ey);
                 break;
             default:

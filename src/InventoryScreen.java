@@ -63,21 +63,110 @@ public class InventoryScreen {
 
     // ── Rendering ─────────────────────────────────────────────────────────────
 
-    private static void renderOverlay(boolean dropMode) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\033[H");
+    /**
+     * Render the inventory as a centered box within the terminal viewport.
+     *
+     * The box width is the longest content line + 4 (for left/right padding),
+     * capped at VIEW_W.  The box height is the number of content lines + 2
+     * (top/bottom border), capped at VIEW_H.
+     *
+     * Everything outside the box — blank rows above/below and spaces to the
+     * left/right — is filled so the rest of the map is obscured cleanly.
+     *
+     * Layout uses VIEW_CX and VIEW_CY (the screen centre constants from
+     * GameState) to calculate the top-left corner of the box.
+     */
+    private static void renderOverlay(boolean dropMode) {
+        List<String> content = GameState.player.getInventory().buildDisplayLines(dropMode);
 
-        List<String> lines = GameState.player.getInventory().buildDisplayLines(dropMode);
-        for (int row = 0; row < GameState.VIEW_H; row++) {
-            sb.append("\033[K");
-            if (row < lines.size()) sb.append(lines.get(row));
+        // ── Box sizing ────────────────────────────────────────────────────────
+        // Find the longest raw content line to set box width
+        int maxContentW = 0;
+        for (String line : content)
+            maxContentW = Math.max(maxContentW, line.length());
+
+        // Box inner width = max content width; outer = +4 for "| " and " |"
+        int innerW = Math.min(maxContentW, GameState.VIEW_W - 4);
+        int outerW = innerW + 4;
+
+        // Box height: content lines + top border + bottom border
+        int innerH = Math.min(content.size(), GameState.VIEW_H - 2);
+        int outerH = innerH + 2;
+
+        // ── Top-left corner ───────────────────────────────────────────────────
+        // VIEW_CX / VIEW_CY are the centre of the viewport
+        int boxLeft = GameState.VIEW_CX - outerW / 2;
+        int boxTop  = GameState.VIEW_CY - outerH / 2;
+
+        // Clamp so the box never goes off screen
+        boxLeft = Math.max(0, boxLeft);
+        boxTop  = Math.max(0, boxTop);
+
+        // ── Mode label for bottom border ──────────────────────────────────────
+        String modeLabel = dropMode ? " DROP MODE " : " INVENTORY ";
+
+        // ── Build output ──────────────────────────────────────────────────────
+        StringBuilder sb = new StringBuilder();
+        sb.append("\033[H");   // cursor to top-left
+
+        for (int screenRow = 0; screenRow < GameState.VIEW_H; screenRow++) {
+            sb.append("\033[K");   // clear line
+
+            int relRow = screenRow - boxTop;   // position relative to box top
+
+            if (relRow == 0) {
+                // ── Top border ────────────────────────────────────────────────
+                pad(sb, boxLeft);
+                sb.append('┌');
+                String title = " INVENTORY ";
+                int dashTotal = innerW + 2 - title.length();
+                int dashL = dashTotal / 2, dashR = dashTotal - dashL;
+                repeat(sb, '─', dashL);
+                sb.append(title);
+                repeat(sb, '─', dashR);
+                sb.append('┐');
+
+            } else if (relRow == outerH - 1) {
+                // ── Bottom border ─────────────────────────────────────────────
+                pad(sb, boxLeft);
+                sb.append('└');
+                int dashTotal = innerW + 2 - modeLabel.length();
+                int dashL = dashTotal / 2, dashR = dashTotal - dashL;
+                repeat(sb, '─', dashL);
+                sb.append(modeLabel);
+                repeat(sb, '─', dashR);
+                sb.append('┘');
+
+            } else if (relRow >= 1 && relRow <= innerH) {
+                // ── Content row ───────────────────────────────────────────────
+                int contentIdx = relRow - 1;
+                String line = (contentIdx < content.size()) ? content.get(contentIdx) : "";
+
+                // Truncate if wider than inner box
+                if (line.length() > innerW)
+                    line = line.substring(0, innerW);
+
+                // Pad to inner width
+                int rightPad = innerW - line.length();
+
+                pad(sb, boxLeft);
+                sb.append("│ ");
+                sb.append(line);
+                repeat(sb, ' ', rightPad);
+                sb.append(" │");
+
+            }
+            // Rows outside the box are blank (cleared by \033[K above)
+
             sb.append('\n');
         }
 
+        // Status bar and hint stay below VIEW_H as normal
         sb.append("\033[K").append(GameState.player.getStatusBar()).append('\n');
         sb.append("\033[K  ").append(dropMode
-                ? "** DROP MODE — press a number to drop, D to cancel **"
-                : "INVENTORY — V/ESC to close").append('\n');
+                        ? "DROP MODE: [1-9] drop weapon  [D] cancel  [V/ESC] close"
+                        : "INVENTORY: [1-9] equip  [U] use potion  [D] drop mode  [V/ESC] close")
+                .append('\n');
 
         for (int i = 0; i < GameState.LOG_SIZE; i++) {
             sb.append("\033[K");
@@ -88,6 +177,18 @@ public class InventoryScreen {
 
         System.out.print(sb);
         System.out.flush();
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+
+    /** Append `count` spaces — used to push content to the right. */
+    private static void pad(StringBuilder sb, int count) {
+        for (int i = 0; i < count; i++) sb.append(' ');
+    }
+
+    /** Append `count` copies of character `c`. */
+    private static void repeat(StringBuilder sb, char c, int count) {
+        for (int i = 0; i < count; i++) sb.append(c);
     }
 
     // ── Input handling ────────────────────────────────────────────────────────
