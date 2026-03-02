@@ -15,7 +15,8 @@ public class InputHandler {
     // ── Terminal size ─────────────────────────────────────────────────────────
 
     static void detectTerminalSize() {
-        int w = 80, h = 24;
+        int termW = GameState.BORDER_FILE_W;   // default: assume border size
+        int termH = GameState.BORDER_FILE_H;
         try {
             Process p = Runtime.getRuntime().exec(
                     new String[]{"sh", "-c", "stty size </dev/tty"});
@@ -23,15 +24,37 @@ public class InputHandler {
             p.waitFor();
             String[] parts = out.split(" ");
             if (parts.length == 2) {
-                h = Integer.parseInt(parts[0]);
-                w = Integer.parseInt(parts[1]);
+                termH = Integer.parseInt(parts[0]);
+                termW = Integer.parseInt(parts[1]);
             }
         } catch (Exception ignored) {}
 
-        GameState.VIEW_H = h - 3 - GameState.LOG_SIZE;
-        GameState.VIEW_W = w;
+        // Warn if terminal is smaller than the border file — content will clip.
+        // Larger terminals are fine; the border will be left-top aligned and
+        // the status bar / log will appear below it as normal.
+        if (termW < GameState.BORDER_FILE_W || termH < GameState.BORDER_FILE_H) {
+            System.err.println("[WARNING] Terminal is " + termW + "x" + termH +
+                    " — border requires " + GameState.BORDER_FILE_W +
+                    "x" + GameState.BORDER_FILE_H + ". Resize your terminal.");
+        }
+
+        // The world viewport lives inside the border walls.
+        // VIEWPORT_ROW/COL are where the world region starts on screen (0-based).
+        GameState.VIEWPORT_ROW = GameState.BORDER_TOP;
+        GameState.VIEWPORT_COL = GameState.BORDER_LEFT;
+
+        // VIEW_W/H are the inner dimensions — all gameplay code uses these.
+        GameState.VIEW_W  = GameState.BORDER_FILE_W
+                - GameState.BORDER_LEFT
+                - GameState.BORDER_RIGHT;
+        GameState.VIEW_H  = GameState.BORDER_FILE_H
+                - GameState.BORDER_TOP
+                - GameState.BORDER_BOTTOM;
+
+        // Ensure odd dimensions so the player sits on a true centre cell
         if (GameState.VIEW_H % 2 == 0) GameState.VIEW_H--;
         if (GameState.VIEW_W % 2 == 0) GameState.VIEW_W--;
+
         GameState.VIEW_CX = GameState.VIEW_W / 2;
         GameState.VIEW_CY = GameState.VIEW_H / 2;
     }

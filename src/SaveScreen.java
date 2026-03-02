@@ -99,17 +99,10 @@ public class SaveScreen {
             sb.append('\n');
         }
 
-        // Status bar + controls hint
-        sb.append("\033[K").append(GameState.player.getStatusBar()).append('\n');
-        sb.append("\033[K  SAVE SCREEN — [S] Save game   [ESC / Q] Close\n");
-
-        // Combat log
-        for (int i = 0; i < GameState.LOG_SIZE; i++) {
-            sb.append("\033[K");
-            if (i < GameState.combatLog.size())
-                sb.append(" ").append(GameState.combatLog.get(i));
-            sb.append('\n');
-        }
+        // Hint centred in the status bar row inside the bottom border wall
+        sb.append(Renderer.centredInViewport(
+                "SAVE SCREEN — [S] Save   [ESC / Q] Close",
+                GameState.BORDER_FILE_H - 2));
 
         System.out.print(sb);
         System.out.flush();

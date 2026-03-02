@@ -12,7 +12,24 @@ import java.util.Random;
 // ─────────────────────────────────────────────────────────────────────────────
 public class GameState {
 
+    // ── Border overlay ───────────────────────────────────────────────────────
+    // Measured from assets/border.txt  (190 wide × 55 tall, 3-row top/bottom
+    // walls, 6-col left/right walls).  All other rendering is relative to the
+    // inner viewport these constants define.
+    static final int BORDER_FILE_W   = 190;  // total width of border.txt
+    static final int BORDER_FILE_H   = 54;   // total height of border.txt
+    static final int BORDER_TOP      = 3;    // solid rows at top
+    static final int BORDER_BOTTOM   = 4;    // solid rows at bottom
+    static final int BORDER_LEFT     = 6;    // solid cols on left
+    static final int BORDER_RIGHT    = 6;    // solid cols on right
+
+    // World viewport inside the border — set by InputHandler.detectTerminalSize()
+    static int VIEWPORT_ROW;   // terminal row where world starts (0-based)
+    static int VIEWPORT_COL;   // terminal col where world starts (0-based)
+
     // ── Viewport ──────────────────────────────────────────────────────────────
+    // VIEW_W / VIEW_H are the *inner* dimensions (inside the border).
+    // All gameplay, centering, and overlay code works in these coordinates.
     static int VIEW_W;
     static int VIEW_H;
     static int VIEW_CX;
@@ -42,7 +59,7 @@ public class GameState {
     static Random       rng      = new Random();
 
     // ── Combat log ────────────────────────────────────────────────────────────
-    static final int    LOG_SIZE  = 4;
+    static final int    LOG_SIZE  = 2;   // fits in 2 rows of the bottom border wall
     static List<String> combatLog = new ArrayList<>();
 
     // ── Session stats ─────────────────────────────────────────────────────────

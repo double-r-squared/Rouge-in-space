@@ -118,7 +118,7 @@ public class InventoryScreen {
                 // ── Top border ────────────────────────────────────────────────
                 pad(sb, boxLeft);
                 sb.append('┌');
-                String title = " INVENTORY ";
+                String title = " ROGUE IN SPACE ";
                 int dashTotal = innerW + 2 - title.length();
                 int dashL = dashTotal / 2, dashR = dashTotal - dashL;
                 repeat(sb, '─', dashL);
@@ -161,19 +161,11 @@ public class InventoryScreen {
             sb.append('\n');
         }
 
-        // Status bar and hint stay below VIEW_H as normal
-        sb.append("\033[K").append(GameState.player.getStatusBar()).append('\n');
-        sb.append("\033[K  ").append(dropMode
-                        ? "DROP MODE: [1-9] drop weapon  [D] cancel  [V/ESC] close"
-                        : "INVENTORY: [1-9] equip  [U] use potion  [D] drop mode  [V/ESC] close")
-                .append('\n');
-
-        for (int i = 0; i < GameState.LOG_SIZE; i++) {
-            sb.append("\033[K");
-            if (i < GameState.combatLog.size())
-                sb.append(" ").append(GameState.combatLog.get(i));
-            sb.append('\n');
-        }
+        // Mode hint centred in the status bar row inside the bottom border wall
+        String hint = dropMode
+                ? "DROP MODE: [1-9] drop  [P+n] potion  [D] cancel  [V/ESC] close"
+                : "INVENTORY: [1-9] equip  [U] use potion  [D] drop mode  [V/ESC] close";
+        sb.append(Renderer.centredInViewport(hint, GameState.BORDER_FILE_H - 2));
 
         System.out.print(sb);
         System.out.flush();

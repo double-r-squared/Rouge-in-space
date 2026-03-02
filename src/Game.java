@@ -44,6 +44,7 @@ public class Game {
         }
 
         InputHandler.enableRawMode();
+        Renderer.stampBorder();   // draw border once — render() only updates the inner viewport
         try {
             gameLoop();
         } finally {
@@ -76,11 +77,10 @@ public class Game {
                             GameState.player.getPlayerClass(),
                             GameState.player.getName());
                     continue;
-
                 case 's': case 'S':   // Ctrl+S — open save screen
                     SaveScreen.show();
+                    Renderer.stampBorder();   // restore border after overlay
                     continue;
-
                 case 'Q': return;
 
                 // ── Item pickup ───────────────────────────────────────────────
@@ -109,6 +109,7 @@ public class Game {
                     // ── Inventory ─────────────────────────────────────────────────
                 case 'v': case 'V':
                     InventoryScreen.show();
+                    Renderer.stampBorder();   // restore border after overlay
                     continue;
 
                 default: continue;
