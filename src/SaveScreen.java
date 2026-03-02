@@ -28,7 +28,7 @@ public class SaveScreen {
                 try {
                     SaveManager.save(SaveManager.DEFAULT_SAVE);
                     status = "  Game saved to " + SaveManager.DEFAULT_SAVE + ".  " +
-                            "Time played: " + GameState.formatTimePlayed();
+                             "Time played: " + GameState.formatTimePlayed();
                 } catch (IOException e) {
                     status = "  SAVE FAILED: " + e.getMessage();
                 }
@@ -57,17 +57,18 @@ public class SaveScreen {
         int boxTop  = Math.max(0, GameState.VIEW_CY - outerH / 2);
 
         // ── Draw ──────────────────────────────────────────────────────────────
+        // Absolute cursor positioning only — never clears outside the box.
+        // The border art and world behind the overlay are completely untouched.
         StringBuilder sb = new StringBuilder();
-        sb.append("\033[H");
 
-        for (int row = 0; row < GameState.VIEW_H; row++) {
-            sb.append("\033[K");
-            int rel = row - boxTop;
+        for (int rel = 0; rel < outerH; rel++) {
+            int termRow = GameState.VIEWPORT_ROW + boxTop + rel + 1;   // 1-based
+            int termCol = GameState.VIEWPORT_COL + boxLeft + 1;        // 1-based
+            sb.append(String.format("\033[%d;%dH", termRow, termCol));
 
             if (rel == 0) {
                 // Top border
                 String title = " SAVE GAME ";
-                pad(sb, boxLeft);
                 sb.append('┌');
                 int dashes = innerW + 2 - title.length();
                 repeat(sb, '─', dashes / 2);
@@ -77,32 +78,24 @@ public class SaveScreen {
 
             } else if (rel == outerH - 1) {
                 // Bottom border
-                String hint = " ESC/Q: close ";
-                pad(sb, boxLeft);
+                String closehint = " ESC/Q: close ";
                 sb.append('└');
-                int dashes = innerW + 2 - hint.length();
+                int dashes = innerW + 2 - closehint.length();
                 repeat(sb, '─', dashes / 2);
-                sb.append(hint);
+                sb.append(closehint);
                 repeat(sb, '─', dashes - dashes / 2);
                 sb.append('┘');
 
-            } else if (rel >= 1 && rel <= innerH) {
+            } else {
                 // Content row
                 String line = (rel - 1 < content.size()) ? content.get(rel - 1) : "";
                 if (line.length() > innerW) line = line.substring(0, innerW);
-                pad(sb, boxLeft);
                 sb.append("│ ");
                 sb.append(line);
                 repeat(sb, ' ', innerW - line.length());
                 sb.append(" │");
             }
-            sb.append('\n');
         }
-
-        // Hint centred in the status bar row inside the bottom border wall
-        sb.append(Renderer.centredInViewport(
-                "SAVE SCREEN — [S] Save   [ESC / Q] Close",
-                GameState.BORDER_FILE_H - 2));
 
         System.out.print(sb);
         System.out.flush();

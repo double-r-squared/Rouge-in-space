@@ -43,7 +43,7 @@ public class InventoryScreen {
             if (key == 'p' || key == 'P') {
                 awaitPotion = true;
                 GameState.log(dropMode ? "Drop potion: press slot number."
-                        : "Use potion:  press slot number.");
+                                       : "Use potion:  press slot number.");
                 continue;
             }
 
@@ -106,17 +106,18 @@ public class InventoryScreen {
         String modeLabel = dropMode ? " DROP MODE " : " INVENTORY ";
 
         // ── Build output ──────────────────────────────────────────────────────
+        // Use absolute cursor positioning for every row so we only write box
+        // characters — the border and world behind the overlay are untouched.
         StringBuilder sb = new StringBuilder();
-        sb.append("\033[H");   // cursor to top-left
 
-        for (int screenRow = 0; screenRow < GameState.VIEW_H; screenRow++) {
-            sb.append("\033[K");   // clear line
-
-            int relRow = screenRow - boxTop;   // position relative to box top
+        for (int relRow = 0; relRow < outerH; relRow++) {
+            // Terminal row for this box row (1-based ANSI)
+            int termRow = GameState.VIEWPORT_ROW + boxTop + relRow + 1;
+            int termCol = GameState.VIEWPORT_COL + boxLeft + 1;
+            sb.append(String.format("\033[%d;%dH", termRow, termCol));
 
             if (relRow == 0) {
                 // ── Top border ────────────────────────────────────────────────
-                pad(sb, boxLeft);
                 sb.append('┌');
                 String title = " ROGUE IN SPACE ";
                 int dashTotal = innerW + 2 - title.length();
@@ -128,7 +129,6 @@ public class InventoryScreen {
 
             } else if (relRow == outerH - 1) {
                 // ── Bottom border ─────────────────────────────────────────────
-                pad(sb, boxLeft);
                 sb.append('└');
                 int dashTotal = innerW + 2 - modeLabel.length();
                 int dashL = dashTotal / 2, dashR = dashTotal - dashL;
@@ -137,35 +137,19 @@ public class InventoryScreen {
                 repeat(sb, '─', dashR);
                 sb.append('┘');
 
-            } else if (relRow >= 1 && relRow <= innerH) {
+            } else {
                 // ── Content row ───────────────────────────────────────────────
                 int contentIdx = relRow - 1;
                 String line = (contentIdx < content.size()) ? content.get(contentIdx) : "";
-
-                // Truncate if wider than inner box
                 if (line.length() > innerW)
                     line = line.substring(0, innerW);
-
-                // Pad to inner width
                 int rightPad = innerW - line.length();
-
-                pad(sb, boxLeft);
                 sb.append("│ ");
                 sb.append(line);
                 repeat(sb, ' ', rightPad);
                 sb.append(" │");
-
             }
-            // Rows outside the box are blank (cleared by \033[K above)
-
-            sb.append('\n');
         }
-
-        // Mode hint centred in the status bar row inside the bottom border wall
-        String hint = dropMode
-                ? "DROP MODE: [1-9] drop  [P+n] potion  [D] cancel  [V/ESC] close"
-                : "INVENTORY: [1-9] equip  [U] use potion  [D] drop mode  [V/ESC] close";
-        sb.append(Renderer.centredInViewport(hint, GameState.BORDER_FILE_H - 2));
 
         System.out.print(sb);
         System.out.flush();
