@@ -8,8 +8,8 @@
 
 set -e
 
-JAR="sqlite-jdbc-3.45.1.0.jar"
-JAR_URL="https://github.com/xerial/sqlite-jdbc/releases/download/3.45.1.0/$JAR"
+JAR="sqlite-jdbc-3.36.0.3.jar"
+JAR_URL="https://github.com/xerial/sqlite-jdbc/releases/download/3.36.0.3/$JAR"
 
 echo "=== Rogue in Space — setup ==="
 echo ""

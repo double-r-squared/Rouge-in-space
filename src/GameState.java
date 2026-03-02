@@ -45,8 +45,30 @@ public class GameState {
     static final int    LOG_SIZE  = 4;
     static List<String> combatLog = new ArrayList<>();
 
+    // ── Session stats ─────────────────────────────────────────────────────────
+    static int  enemiesKilled = 0;
+    static int  levelsCleared = 0;
+
+    // ── Session timer ─────────────────────────────────────────────────────────
+    // sessionStart is set when the game begins or a save is loaded.
+    // previouslyPlayed accumulates time from all prior sessions.
+    static long sessionStart     = System.currentTimeMillis();
+    static long previouslyPlayed = 0L;   // milliseconds from saved sessions
+
+    /** Total milliseconds played across all sessions including the current one. */
+    static long totalPlayedMillis() {
+        return previouslyPlayed + (System.currentTimeMillis() - sessionStart);
+    }
+
+    /** Format total played time as "HHh MMm SSs". */
+    static String formatTimePlayed() {
+        long total = totalPlayedMillis() / 1000;
+        long h = total / 3600, m = (total % 3600) / 60, s = total % 60;
+        return String.format("%02dh %02dm %02ds", h, m, s);
+    }
+
     // ── Sprite cache ──────────────────────────────────────────────────────────
-    static final String                    ASSETS_DIR   = "Assets";
+    static final String                    ASSETS_DIR   = "assets";
     static final Map<String, List<String>> spriteCache  = new HashMap<>();
 
     // ─────────────────────────────────────────────────────────────────────────

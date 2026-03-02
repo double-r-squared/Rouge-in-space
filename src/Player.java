@@ -173,6 +173,28 @@ public class Player {
     public Inventory   getInventory()   { return inventory; }
     public PlayerClass getPlayerClass() { return playerClass; }
 
+    // ── Save/load support ────────────────────────────────────────────────────
+
+    /**
+     * Restore all mutable stats from a save file.
+     * Called by SaveManager after constructing a fresh Player instance.
+     * The constructor sets stats from PlayerClass defaults; this overwrites
+     * them with the values that were in effect when the game was saved.
+     */
+    public void restoreStats(int hp, int maxHp, int atk, int def, double hit,
+                             int sight, int lvl, int xp, int xpToNext, int gold) {
+        this.currentHealth         = hp;
+        this.maxHealth             = maxHp;
+        this.attack                = atk;
+        this.defense               = def;
+        this.hitChance             = hit;
+        this.sightBonus            = sight;
+        this.level                 = lvl;
+        this.experience            = xp;
+        this.experienceToNextLevel = xpToNext;
+        this.gold                  = gold;
+    }
+
     // ── Getters ───────────────────────────────────────────────────────────────
 
     public String getName()        { return name; }

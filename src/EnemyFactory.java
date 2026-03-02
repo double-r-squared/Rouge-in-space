@@ -93,7 +93,19 @@ public class EnemyFactory {
     }
 
     private static void load() throws SQLException {
-        // JDBC URL for SQLite — the driver is on the classpath via sqlite-jdbc
+        // Explicitly register the SQLite driver class.
+        // Required because DriverManager's ServiceLoader auto-discovery is not
+        // guaranteed when the JAR is passed via -cp rather than as a module.
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException(
+                    "SQLite JDBC driver not found on classpath.\n" +
+                            "Compile and run with the JAR on the classpath:\n" +
+                            "  javac -cp .:sqlite-jdbc-3.36.0.3.jar *.java\n" +
+                            "  java  -cp .:sqlite-jdbc-3.36.0.3.jar Game", e);
+        }
+
         String url = "jdbc:sqlite:" + DB_PATH;
 
         try (Connection conn = DriverManager.getConnection(url);

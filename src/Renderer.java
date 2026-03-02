@@ -70,7 +70,8 @@ public class Renderer {
         sb.append("\033[K").append(GameState.player.getStatusBar()).append('\n');
         sb.append("\033[K [WASD] Move  [E] Pick up  [T] Melee  [I] Flashbang  " +
                 "[Q] Chemical  [F] Laser  [1] Equip Laser  [V] Inventory  " +
-                "[R] New Level  [Shift+Q] Quit\n");
+                "[R] New Level  [Ctrl+S] Save  [Shift+Q] Quit\n");
+
 
         // Combat log
         for (int i = 0; i < GameState.LOG_SIZE; i++) {
@@ -152,7 +153,7 @@ public class Renderer {
             return false;
         }
 
-        File[] files = folder.listFiles((dir, name) -> 
+        File[] files = folder.listFiles((dir, name) ->
             name.matches(enemyName.toLowerCase() + "_\\d{3}\\.txt"));
 
         if (files == null || files.length == 0) {
@@ -200,6 +201,35 @@ public class Renderer {
             Thread.sleep(250);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    // ── Death animation ─────────────────────────────────────────────────────────
+
+    /**
+     * Display an animated death sequence from a folder.
+     * Looks for files matching pattern: death-000.txt, death-001.txt, etc.
+     * Displays each frame for 125ms (1/8 second).
+     * if folder does not exit then display simple text.
+     */
+    static void deathAnimation() throws InterruptedException, IOException {
+        String folderPath = GameState.ASSETS_DIR + "/" +  "death-encounter";
+        File folder = new File(folderPath);
+
+        File[] files = folder.listFiles((dir, name) ->
+                name.matches("death-encounter" + "_\\d{3}\\.txt"));
+
+        if (files == null || files.length == 0) {
+            return;
+        }
+
+        // Sort files numerically
+        java.util.Arrays.sort(files, Collections.reverseOrder());
+
+        for (File file : files) {
+            List<String> lines = Files.readAllLines(file.toPath());
+            renderSprite(lines);
+            Thread.sleep(125); // 1/8 second
         }
     }
 }

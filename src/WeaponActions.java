@@ -46,6 +46,7 @@ public class WeaponActions {
         }
         if (!target.isAlive()) {
             GameState.player.gainExperience(Combat.xpReward(target));
+            GameState.enemiesKilled++;
             GameState.log(target.getName() + " defeated!");
             Combat.rollDrop(target);
         }
@@ -112,6 +113,7 @@ public class WeaponActions {
         }
         if (!target.isAlive()) {
             GameState.player.gainExperience(Combat.xpReward(target));
+            GameState.enemiesKilled++;
             GameState.log(target.getName() + " destroyed!");
             Combat.rollDrop(target);
         }

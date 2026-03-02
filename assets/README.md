@@ -1,3 +1,3 @@
-# Assets
+# assets
 
-Assets go here, e.g., images, audio, etc.
+assets go here, e.g., images, audio, etc.

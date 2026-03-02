@@ -23,7 +23,26 @@ public class Game {
         PlayerClass chosenClass = InputHandler.selectClass();
         String      chosenName  = InputHandler.enterName();
 
-        LevelGen.generateLevel(chosenClass, chosenName);
+        // ── Load or new game ─────────────────────────────────────────────────
+        if (SaveManager.saveExists(SaveManager.DEFAULT_SAVE)) {
+            System.out.print("  Save file found. Load it? (Y/n): ");
+            String answer = new java.util.Scanner(System.in).nextLine().trim();
+            if (!answer.equalsIgnoreCase("n")) {
+                try {
+                    LevelGen.generateLevel(chosenClass, chosenName); // init map arrays
+                    SaveManager.load(SaveManager.DEFAULT_SAVE);
+                } catch (Exception e) {
+                    System.out.println("  Failed to load save: " + e.getMessage());
+                    System.out.println("  Starting a new game instead.");
+                    LevelGen.generateLevel(chosenClass, chosenName);
+                }
+            } else {
+                LevelGen.generateLevel(chosenClass, chosenName);
+            }
+        } else {
+            LevelGen.generateLevel(chosenClass, chosenName);
+        }
+
         InputHandler.enableRawMode();
         try {
             gameLoop();
@@ -45,10 +64,6 @@ public class Game {
             int dx = 0, dy = 0;
             switch (key) {
                 // ── Movement ──────────────────────────────────────────────────
-                case 'w': case 'W': dy = -1; break;
-                case 's': case 'S': dy =  1; break;
-                case 'a': case 'A': dx = -1; break;
-                case 'D':           dx =  1; break;
                 case 1000:          dy = -1; break;
                 case 1001:          dy =  1; break;
                 case 1002:          dx = -1; break;
@@ -56,10 +71,16 @@ public class Game {
 
                 // ── Level / meta ──────────────────────────────────────────────
                 case 'r': case 'R':
+                    GameState.levelsCleared++;
                     LevelGen.generateLevel(
                             GameState.player.getPlayerClass(),
                             GameState.player.getName());
                     continue;
+
+                case 's': case 'S':   // Ctrl+S — open save screen
+                    SaveScreen.show();
+                    continue;
+
                 case 'Q': return;
 
                 // ── Item pickup ───────────────────────────────────────────────

@@ -49,6 +49,7 @@ public class Combat {
         if (!e.isAlive()) {
             int xp = xpReward(e);
             p.gainExperience(xp);
+            GameState.enemiesKilled++;
             GameState.log(e.getName() + " is defeated! +" + xp + " XP");
             rollDrop(e);
             return;
