@@ -18,6 +18,9 @@ qodana.yaml
 out/
 **/out/
 
+out_test/
+**/out_test/
+
 **/bin/
 
 # Savegame file (runtime-generated)

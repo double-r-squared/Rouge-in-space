@@ -1,7 +1,9 @@
-# Test Skeletons
+# Test Overview
 
-This folder contains placeholder test skeletons for core game systems.
+This folder contains tests for core game systems, including:
 
-Current state:
-- No external test framework is required to keep these files in the repo.
-- Methods are intentionally empty and named as target test cases.
+- Dungeon generation (map tiles, rooms, and connectivity)
+- Player state (stats, inventory, save/load)
+- Enemies (spawning, positions, and attributes)
+- Items (placement, types, and quantities)
+- Save/load integrity (round‑tripping `savegame.json`)
