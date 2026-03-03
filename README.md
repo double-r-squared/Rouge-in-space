@@ -89,6 +89,18 @@ chmod +x scripts/setup-tests.sh scripts/run-tests.sh
 ./scripts/run-tests.sh
 ```
 
+If JUnit imports fail in IntelliJ, re-add 
+`support_files/junit-platform-console-standalone-1.10.2.jar` as module dependency with 
+Compile scope.
+
+In IntelliJ:
+1. File -> Project Structure -> Modules -> Dependencies
+2. Remove `JUnit5Standalone` (if it exists)
+3. Click `+` -> JARs or directories... 
+4. Select `support_files/junit-platform-console-standalone-1.10.2.jar`
+5. Set scope to `Compile`
+6. Rebuild
+
 ## Requirements
 
 Required:
