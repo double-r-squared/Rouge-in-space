@@ -1,7 +1,5 @@
 /**
- * Test skeleton for GameState behavior.
- *
- * These are placeholders for future unit tests.
+ * Test for GameState behavior.
  */
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -31,16 +29,57 @@ public class GameStateTest {
 
     @Test
     void enemyAt_returnsOnlyAliveEnemies() {
-        // TODO Arrange / Act / Assert
+        List<Enemy> original = GameState.enemies;
+        try {
+            GameState.enemies = new ArrayList<>();
+
+            Enemy alive = new Enemy("Alive", 'A', 10, 1, 1.0, 3, false, 5, 6);
+            Enemy dead  = new Enemy("Dead", 'D', 10, 1, 1.0, 3, false, 5, 6);
+            dead.takeDamage(999);
+
+            GameState.enemies.add(dead);
+            GameState.enemies.add(alive);
+
+            assertEquals(alive, GameState.enemyAt(5, 6));
+            assertNull(GameState.enemyAt(99, 99));
+        } finally {
+            GameState.enemies = original;
+        }
     }
 
     @Test
     void itemAt_ignoresConsumedItems() {
-        // TODO Arrange / Act / Assert
+        List<Potion> original = GameState.items;
+        try {
+            GameState.items = new ArrayList<>();
+
+            HealthPotion consumed = new HealthPotion(2, 3);
+            consumed.consume();
+            HealthPotion active = new HealthPotion(2, 3);
+
+            GameState.items.add(consumed);
+            GameState.items.add(active);
+
+            assertEquals(active, GameState.itemAt(2, 3));
+            assertNull(GameState.itemAt(7, 7));
+        } finally {
+            GameState.items = original;
+        }
     }
 
     @Test
     void totalPlayedMillis_includesCurrentSessionTime() {
-        // TODO Arrange / Act / Assert
+        long originalPreviously = GameState.previouslyPlayed;
+        long originalSession = GameState.sessionStart;
+        try {
+            GameState.previouslyPlayed = 1_000L;
+            GameState.sessionStart = System.currentTimeMillis() - 2_000L;
+
+            long total = GameState.totalPlayedMillis();
+            assertTrue(total >= 3_000L);
+        } finally {
+            GameState.previouslyPlayed = originalPreviously;
+            GameState.sessionStart = originalSession;
+        }
     }
 }
