@@ -77,6 +77,18 @@ Convenient scripts:
 They open a new terminal window and run setup/build/run for you.
 Use the script for your platform (`run-new-window.sh` is Linux-only).
 
+## Tests (JUnit 5)
+
+From the project root:
+
+```bash
+# one-time script permissions
+chmod +x scripts/setup-tests.sh scripts/run-tests.sh
+
+# run tests (first run downloads JUnit into support_files/)
+./scripts/run-tests.sh
+```
+
 ## Requirements
 
 Required:
