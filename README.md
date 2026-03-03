@@ -54,6 +54,20 @@ java -cp out;src\sqlite-jdbc-3.36.0.3.jar Game
 
 ## Optional: launch in a new terminal window
 
+From the project root:
+
+```bash
+# one-time executable permission (macOS/Linux)
+chmod +x scripts/run-new-window.command scripts/run-new-window.sh
+
+# macOS
+./scripts/run-new-window.command
+
+# Linux
+./scripts/run-new-window.sh
+
+```
+
 Convenient scripts:
 
 - macOS: `scripts/run-new-window.command`
@@ -61,6 +75,7 @@ Convenient scripts:
 - Windows: `scripts/run-new-window.bat`
 
 They open a new terminal window and run setup/build/run for you.
+Use the script for your platform (`run-new-window.sh` is Linux-only).
 
 ## Requirements
 
