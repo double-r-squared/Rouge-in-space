@@ -20,6 +20,9 @@ out/
 
 **/bin/
 
+# Savegame file (runtime-generated)
+savegame.json
+./src/savegame.json
 
 # Log file
 *.log
@@ -145,3 +148,4 @@ gradle-app.setting
 # Eclipse Core
 # JDT-specific (Eclipse Java Development Tools)
 
+!/src/savegame.json
