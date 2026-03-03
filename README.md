@@ -1,103 +1,116 @@
 # Rogue In Space
 
-A tiny terminal roguelike with space vibes.
+A tiny terminal deep-space rogue-like.
+
 ---
 
 ## Repo layout
 
+- `src/` — **Java source code** (flat repo: `src/*.java`)
+- `assets/` — **game assets** (ASCII art, encounter frames, etc.)
+- `scripts/` — setup helpers (note: a copy of `setup.sh` is under `src/`)
+- `db/` — database-related files (canonical database seed script lives here)
+- `utils/` — dev tools (e.g., `ascii-gen.py`)
+- `out/` — build output (please do not commit)
 
-- `src/main/` — Source code
-- `src/test/` — Tests
-- `scripts/` — scripts for setting up the project
-- `assets/` — game assets (ASCII art, encounter frames, etc.)
-- `utils/` — python scripts for processing images into ASCII art
-- `db/` — database files
-- `db/seed_monsters.sql` — seed monsters into the database
-- `sqlite-jdbc-3.36.0.3.jar` — SQLite JDBC driver
 ---
 
-**TL;DR:** 
-- Run `./setup.sh`, 
-- download `sqlite-jdbc-3.36.0.3.jar` into the project root, 
-- compile with `javac -cp .:sqlite-jdbc-3.36.0.3.jar $(find src/main/java -name "*.java")`, 
-- then run the game using `java -cp .:sqlite-jdbc-3.36.0.3.jar rogueinspace.Game`.
+## TL;DR (macOS / Linux)
 
-## Quick start (macOS / Linux)
+From the **project root**:
+
+```bash
+# 1) Setup (downloads the JDBC driver & checks the DB)
+# Our current `src/setup.sh` expects to be run from inside `src/`
+cd src # 
+chmod +x ./setup.sh
+./setup.sh
+cd ..
+
+# 2) Compile into ./out
+mkdir -p out
+javac -d out -cp src:src/sqlite-jdbc-3.36.0.3.jar src/*.java
+
+# 3) Run
+java -cp out:src/sqlite-jdbc-3.36.0.3.jar Game
+```
+
+---
+
+## TL;DR (Windows PowerShell)
+
+```powershell
+# 1) Setup (requires a bash shell like Git Bash / WSL)
+cd src
+bash .\setup.sh
+cd ..
+
+# 2) Compile into ./out
+mkdir out -ErrorAction SilentlyContinue
+javac -d out -cp src;src\sqlite-jdbc-3.36.0.3.jar src\*.java
+
+# 3) Run
+java -cp out;src\sqlite-jdbc-3.36.0.3.jar Game
+```
+
+If you don’t have `bash` on Windows, you can manually download the JDBC jar (below).
+
+---
+
+## What you need
 
 ### Required
 - **Java (JDK 8+)**
-- **A terminal** (macOS Terminal, Linux shell)
+- A terminal
 
-### Suggested
-- **SQLite CLI (`sqlite3`)** — if you want to inspect the database manually.
+### Optional
+- **SQLite CLI (`sqlite3`)** — if you want to inspect the database.
 
-1) From the project root, run the setup script:
-
-```bash
-./setup.sh
-# if that doesn't work, try: chmod +x ./setup.sh
-```
-
-2) Download the SQLite JDBC driver into the project root:
-
-```bash
-curl -L -o sqlite-jdbc-3.36.0.3.jar \
-  https://github.com/xerial/sqlite-jdbc/releases/download/3.36.0.3/sqlite-jdbc-3.36.0.3.jar
-```
-
-We use the JDBC API to let our Java program talk to our SQLite database.
-
-3) Compile the project:
-
-```bash
-# From the project root
-javac -cp .:sqlite-jdbc-3.36.0.3.jar $(find src/main/java -name "*.java")
-```
-Compiles every `.java` file under `src/main/java`.
-
-4) Run the game:
-Depending on your package structure, you may need to run the game in one of two ways:
-```bash
-# If your entrypoint class is in the default package
-java -cp .:sqlite-jdbc-3.36.0.3.jar Game
-```
-
-If that fails with “Could not find or load main class”, your entrypoint class may be in a 
-package.
-Try the packaged main instead:
-
-```bash
-# If your main class is in a package
-java -cp .:sqlite-jdbc-3.36.0.3.jar rogueinspace.Game
-```
+> Note: Our game talks to SQLite via the JDBC driver JAR. 
+> 
+> The `sqlite`command is not required.
 
 ---
 
-## Verifying your setup
+## Manual setup
 
-### Java
+If you skipped the script:
+
+### 1) Download the SQLite JDBC driver
+
+Download the driver **into `src/`**.
+(currently, the build commands expect it to be there):
 
 ```bash
-java -version
-javac -version
+curl -L -o src/sqlite-jdbc-3.36.0.3.jar \
+  https://github.com/xerial/sqlite-jdbc/releases/download/3.36.0.3/sqlite-jdbc-3.36.0.3.jar
 ```
 
-### SQLite (optional)
+### 2) Ensure the monsters database exists
+
+The game currently uses:
+- `src/monsters.db`
+
+To (re)seed it from SQL:
 
 ```bash
-# Notice: sqlite3 vs sqlite
-sqlite3 --version
+sqlite3 src/monsters.db < db/seed_monsters.sql
 ```
 
 ---
 
 ## Keeping the repo clean
 
-Please do **not** commit compiled `.class` files.
+Please do **not** commit compiled `.class` files or local build outputs.
 
-You may delete them safely at any time:
+Please include the following into your`.gitignore`:
 
-### macOS / Linux
+- `out/`
+- `*.class`
+- `.idea/`
+- `.DS_Store`
+
+Run to clean out `.class` files (macOS/Linux):
 
 ```bash
 find . -name "*.class" -delete
@@ -105,17 +118,26 @@ find . -name "*.class" -delete
 
 ---
 
-## Troubleshooting
+## Common issues
 
-- **“Could not find or load main class …”**
-  - Try running `Game` vs `rogueinspace.Game` (both commands are shown above).
+- **“Could not find or load main class Game”**
+  - Make sure you compiled with `-d out` and you are running with `-cp out:...` (see TL;DR).
 
 - **“sqlite-jdbc-3.36.0.3.jar not found”**
-  - Make sure the JAR is in the project root and your command matches the filename.
+  - Confirm the jar is at `src/sqlite-jdbc-3.36.0.3.jar`.
+
+- **Assets not found**
+  - Run from the **project root**. The game may expects assets live in `assets/` (root) or 
+    `src/assets/` depending on the version you are running.
 
 ---
 
 ## Team notes (contributors)
 
-- Keep code organized by **MVC** packages (model/view/controller) under `src/main/java/`.
-- Prefer **private fields** and methods that express intent (encapsulation) rather than direct field access.
+Currently (03 March), the Java code is flat in `src/` (no package declarations for 
+model/view/controller/etc.). That’s intentional for the current state of the repo.
+
+Planned future improvement: move to a standard Java layout with packages for proper MVC 
+& encapsulation.
+
+Keep commits small and readable, and avoid committing generated files (e.g., `.class` files).
