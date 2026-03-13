@@ -46,9 +46,6 @@ import java.util.Random;
 // ─────────────────────────────────────────────────────────────────────────────
 public class EnemyFactory {
 
-    // Path to the database file, relative to the working directory
-    private static final String DB_PATH = "monsters.db";
-
     // In-memory cache — loaded once on first call to ensureLoaded()
     private static final List<MonsterDef> pool = new ArrayList<>();
     private static final Random           rng  = new Random();
@@ -88,7 +85,7 @@ public class EnemyFactory {
         try {
             load();
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to load monsters from " + DB_PATH, e);
+            throw new RuntimeException("Failed to load monsters from " + GameState.MONSTER_DB, e);
         }
     }
 
@@ -106,7 +103,7 @@ public class EnemyFactory {
                             "  java  -cp .:sqlite-jdbc-3.36.0.3.jar Game", e);
         }
 
-        String url = "jdbc:sqlite:" + DB_PATH;
+        String url = "jdbc:sqlite:" + GameState.MONSTER_DB;
 
         try (Connection conn = DriverManager.getConnection(url);
              Statement  stmt = conn.createStatement();

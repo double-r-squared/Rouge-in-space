@@ -10,16 +10,15 @@ public class WeaponActions {
 
     // ── Floor item pickup (E key) ─────────────────────────────────────────────
 
-    static boolean tryUseItem() {
-        Potion p = GameState.itemAt(
+    static void tryUseItem() {
+        Item i = GameState.itemAt(
                 GameState.player.getWorldX(), GameState.player.getWorldY());
-        if (p == null) {
+        if (i == null) {
             GameState.log("Nothing to use here.");
-            return false;
+            return;
         }
-        GameState.log(p.use(GameState.player));
-        GameState.items.removeIf(Potion::isConsumed);
-        return true;
+        GameState.log(i.use(GameState.player));
+        GameState.items.removeIf(Item::isConsumed);
     }
 
     // ── Melee attack (T key) ──────────────────────────────────────────────────

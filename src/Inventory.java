@@ -40,7 +40,7 @@ public class Inventory {
     // ── State ─────────────────────────────────────────────────────────────────
     private final double     maxWeight;
     private final List<Weapon> weapons  = new ArrayList<>();
-    private final List<Potion> potions  = new ArrayList<>();
+    private final List<Item> items = new ArrayList<>();
     private Ammo               ammo     = new Ammo(0);
     private int                activeWeaponIndex = -1;   // -1 = unarmed (bare hands)
 
@@ -53,7 +53,7 @@ public class Inventory {
     public double currentWeight() {
         double w = 0;
         for (Weapon wp : weapons) w += wp.getWeight();
-        for (Potion p  : potions) w += 0.5;   // potions are light, fixed 0.5 each
+        for (Item i  : items) w += 0.5;   // potions are light, fixed 0.5 each
         return w;
     }
 
@@ -117,9 +117,9 @@ public class Inventory {
     }
 
     /** Drop a stashed potion by index — returns it so Game can place it on the map. */
-    public Potion dropPotion(int index) {
-        if (index < 0 || index >= potions.size()) return null;
-        return potions.remove(index);
+    public Item dropItem(int index) {
+        if (index < 0 || index >= items.size()) return null;
+        return items.remove(index);
     }
 
     public Weapon       getActiveWeapon()  { return (activeWeaponIndex >= 0 && activeWeaponIndex < weapons.size()) ? weapons.get(activeWeaponIndex) : null; }
@@ -128,20 +128,20 @@ public class Inventory {
 
     // ── Potions ───────────────────────────────────────────────────────────────
 
-    public boolean stashPotion(Potion p) {
+    public boolean stashItem(Item i) {
         if (!canFit(0.5)) return false;
-        potions.add(p);
+        items.add(i);
         return true;
     }
 
     /** Use the first potion of the given type (or just the first in the list). */
-    public String usePotion(Player player) {
-        if (potions.isEmpty()) return "No potions in inventory.";
-        Potion p = potions.remove(0);
+    public String useItem(Player player) {
+        if (items.isEmpty()) return "No potions in inventory.";
+        Item p = items.remove(0);
         return p.use(player);
     }
 
-    public List<Potion> getPotions() { return potions; }
+    public List<Item> getItems() { return items; }
 
     // ── Ammo ─────────────────────────────────────────────────────────────────
 
@@ -173,28 +173,28 @@ public class Inventory {
                 boolean active = (i == activeWeaponIndex);
                 String marker = active ? "  [E] " : "      ";
                 String action = dropMode
-                        ? String.format("  [D+%d] drop", i + 1)
-                        : String.format("  [%d] equip", i + 1);
+                        ? String.format("  [D+%d]", i + 1)
+                        : String.format("  [%d]", i + 1);
                 lines.add(String.format("%s%d. %-36s%s%s",
                         marker, i + 1,
                         weapons.get(i).getDisplayName(),
                         action,
-                        active ? "  <-- equipped" : ""));
+                        active ? "  <- " : ""));
             }
         }
 
         lines.add("");
 
         // ── Potions ──────────────────────────────────────────────────────────
-        lines.add("  POTIONS:");
-        if (potions.isEmpty()) {
+        lines.add("  ITEMS:");
+        if (items.isEmpty()) {
             lines.add("    (none)");
         } else {
-            for (int i = 0; i < potions.size(); i++) {
+            for (int i = 0; i < items.size(); i++) {
                 String action = dropMode
                         ? String.format("  [D+%d] drop", i + 1)
                         : String.format("  [P+%d] use ", i + 1);
-                lines.add(String.format("      %d. %-36s%s", i + 1, potions.get(i).getName(), action));
+                lines.add(String.format("      %d. %-36s%s", i + 1, items.get(i).getName(), action));
             }
         }
 
@@ -210,10 +210,11 @@ public class Inventory {
             lines.add("  DROP MODE  Press D + a number to drop that item.");
             lines.add("  [D+1..9] Drop weapon   [D+P1..9] Drop potion   [D] Exit drop mode");
         } else {
-            lines.add("  [1-9] Equip weapon   [U] Use first potion   [P1-9] Use potion by slot");
+            lines.add("  [1-9] Equip weapon   [U] Use first potion   [P1-9] Use item by slot");
             lines.add("  [D] Enter drop mode  [V / ESC] Close inventory");
         }
 
         return lines;
     }
+
 }

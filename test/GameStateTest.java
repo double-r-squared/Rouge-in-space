@@ -49,7 +49,7 @@ public class GameStateTest {
 
     @Test
     void itemAt_ignoresConsumedItems() {
-        List<Potion> original = GameState.items;
+        List<Item> original = GameState.items;
         try {
             GameState.items = new ArrayList<>();
 

@@ -7,7 +7,7 @@ enum PlayerClass {
     //                   label           hp   atk  def   hit   sight
     SOLDIER  ("Soldier",                120,  14,   3,  0.75,   0),
     MARINE   ("Marine",                  80,  12,   2,  0.92,   1),
-    SCIENTIST("Scientist",               70,   7,   2,  0.70,   4),
+    SCIENTIST("Scientist",               70,   7,   2,  0.70,   2),
     ENGINEER ("Engineer",               100,   9,   7,  0.72,   0),
     PILOT    ("Pilot",                   90,  11,   3,  0.85,   2),
     MEDIC    ("Medic",                  130,   8,   4,  0.73,   1);
@@ -65,6 +65,10 @@ public class Player {
     // ── Inventory ─────────────────────────────────────────────────────────────
     private Inventory inventory;
 
+    // ── Decay ─────────────────────────────────────────────────────────────────
+    // 0.0 = full health, 10.0 = dead. Drives fog density and sight penalty.
+    private double decay = 5.0;
+
     // ── World position ────────────────────────────────────────────────────────
     private int worldX;
     private int worldY;
@@ -102,9 +106,10 @@ public class Player {
     public void takeDamage(int amount) {
         int effective = Math.max(0, amount - defense);
         currentHealth = Math.max(0, currentHealth - effective);
+        updateDecay();
     }
 
-    public void heal(int amount)      { currentHealth = Math.min(maxHealth, currentHealth + amount); }
+    public void heal(int amount)      { currentHealth = Math.min(maxHealth, currentHealth + amount); updateDecay(); }
     public boolean isAlive()          { return currentHealth > 0; }
     public int     getCurrentHealth() { return currentHealth; }
     public int     getMaxHealth()     { return maxHealth; }
@@ -145,8 +150,8 @@ public class Player {
 
     private void levelUp() {
         level++;
-        maxHealth             += 20;
-        currentHealth          = maxHealth;
+        maxHealth             += 5;
+        currentHealth          = currentHealth + 5;
         attack                += 3;
         defense               += 1;
         hitChance              = Math.min(0.97, hitChance + 0.02);
@@ -182,17 +187,50 @@ public class Player {
      * them with the values that were in effect when the game was saved.
      */
     public void restoreStats(int hp, int maxHp, int atk, int def, double hit,
-                             int sight, int lvl, int xp, int xpToNext, int gold) {
+                             int sight, double decay, int lvl, int xp, int xpToNext, int gold) {
         this.currentHealth         = hp;
         this.maxHealth             = maxHp;
         this.attack                = atk;
         this.defense               = def;
         this.hitChance             = hit;
         this.sightBonus            = sight;
+        this.decay                 = decay;
         this.level                 = lvl;
         this.experience            = xp;
         this.experienceToNextLevel = xpToNext;
         this.gold                  = gold;
+    }
+
+    // ── Decay ────────────────────────────────────────────────────────────────
+
+    /** Recompute decay from current HP. Called after any health change. */
+    private void updateDecay() {
+        double ratio = (double)(maxHealth - currentHealth) / maxHealth;  // 0.0 to 1.0
+        decay = ratio * ratio * 20.0;  // squared — slow at first, brutal near death
+    }
+
+    /**
+     * Current decay value, 0.0 (full health) to 10.0 (dead).
+     * Used by LevelGen.forgetRandom to scale fog density,
+     * and by revealAround to shrink the effective sight radius.
+     */
+    public double getDecay() { return decay; }
+
+    /**
+     * Decay as an integer sight penalty (0–4).
+     * Subtracted from the effective sight radius in revealAround.
+     * Capped at SIGHT-1 so the player always sees at least 1 tile.
+     */
+    public int getDecaySightPenalty() {
+        return (int) Math.min(GameState.SIGHT - 1, decay * 0.4);
+    }
+
+    /**
+     * Extra fog tiles to forget per move due to decay (0–8).
+     * Added on top of the base forgetRandom count in Combat.
+     */
+    public int getDecayFogBonus() {
+        return (int)(decay);
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
@@ -214,12 +252,14 @@ public class Player {
                 ? " AMO:" + inventory.getAmmo().getCount()
                 : "";
         return String.format(
-                " [%s] %s | HP:%d/%d | DEF:%d | LVL:%d | XP:%d/%d | WPN:%s%s | WT:%.1f/%.0f",
+                " [%s] %s | HP:%s/%s | DEF:%d | LVL:%d | XP:%d/%d | WPN:%s%s | WT:%.1f/%.0f",
                 playerClass.label, name,
-                currentHealth, maxHealth,
+                currentHealth,
+                maxHealth,
                 defense,
                 level, experience, experienceToNextLevel,
                 weaponLabel, ammoLabel,
-                inventory.currentWeight(), inventory.getMaxWeight());
+                inventory.currentWeight(), inventory.getMaxWeight())
+                + GameState.C_RESET;
     }
 }

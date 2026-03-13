@@ -1,8 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Potion  –  abstract base class for all consumable items
-// TODO: THIS SHOULD BE ITEM NOT POTION
+// Item  –  abstract base class for all consumable items
 //
-// Blueprint for any potion in the game.  Subclasses must define:
+// Blueprint for any item in the game.  Subclasses must define:
 //   • glyph       – the character rendered on the map  ('d' or 'b')
 //   • name        – displayed in pickup / use messages
 //   • use(Player) – the actual effect applied to the player
@@ -13,7 +12,7 @@
 // Each item tracks its world position and a consumed flag.  Once consumed
 // it is removed from the active items list in Game.
 // ─────────────────────────────────────────────────────────────────────────────
-public abstract class Potion {
+public abstract class Item {
 
     protected String name;
     protected char   glyph;
@@ -21,7 +20,7 @@ public abstract class Potion {
     protected int    worldY;
     protected boolean consumed = false;
 
-    public Potion(String name, char glyph, int x, int y) {
+    public Item(String name, char glyph, int x, int y) {
         this.name   = name;
         this.glyph  = glyph;
         this.worldX = x;
@@ -46,6 +45,7 @@ public abstract class Potion {
     public int    getWorldY()    { return worldY; }
     public char   getGlyph()     { return glyph; }
     public String getName()      { return name; }
+
 }
 
 
@@ -57,7 +57,7 @@ public abstract class Potion {
 //
 // Heal amount: 30% of player max HP, minimum 25.
 // ─────────────────────────────────────────────────────────────────────────────
-class HealthPotion extends Potion {
+class HealthPotion extends Item {
 
     public HealthPotion(int x, int y) {
         super("Health Potion", 'd', x, y);
@@ -77,10 +77,27 @@ class HealthPotion extends Potion {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AmmoPickup  –  glyph '%'
+// ArtifactPickup  –  glyph 'x'
+// Picked up with E, adds artifact to the game state.
+// ─────────────────────────────────────────────────────────────────────────────
+class ArtifactPickup extends Item {
+    public ArtifactPickup(int x, int y) {
+        super("Artifact", 'x', x, y);
+    }
+    @Override
+    public String use(Player player) {
+        GameState.artifactsCollected = GameState.artifactsCollected + 1;
+        consume();
+        return "Picked up an Artifact. Total: " + GameState.artifactsCollected;
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AmmePickup  –  glyph '%'
 // Picked up with E; adds ammo to the player's inventory stack.
 // ─────────────────────────────────────────────────────────────────────────────
-class AmmoPickup extends Potion {
+class AmmoPickup extends Item {
     private final int qty;
     public AmmoPickup(int x, int y, int qty) {
         super("Ammo x" + qty, '%', x, y);
@@ -94,12 +111,11 @@ class AmmoPickup extends Potion {
     }
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // DroppedWeapon  –  glyph is weapon specific
 // A weapon lying on the floor.  Pressing E picks it up into inventory.
 // ─────────────────────────────────────────────────────────────────────────────
-class DroppedWeapon extends Potion {
+class DroppedWeapon extends Item {
     private final Weapon weapon;
     public DroppedWeapon(int x, int y, Weapon weapon) {
         super(weapon.getWeaponClass(), weapon.getGlyph(), x, y);
@@ -114,6 +130,10 @@ class DroppedWeapon extends Potion {
             return "Can't pick up " + weapon.getWeaponClass() + " — inventory too heavy!";
         }
     }
+
+    public Weapon getWeapon() {
+        return weapon; // whatever the field is named
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,9 +145,9 @@ class DroppedWeapon extends Potion {
 //
 // Vision boost: +4 tiles added to the player's sightBonus.
 // ─────────────────────────────────────────────────────────────────────────────
-class VisionPotion extends Potion {
+class VisionPotion extends Item {
 
-    static final int VISION_BOOST = 4;
+    static final int VISION_BOOST = 1;
 
     public VisionPotion(int x, int y) {
         super("Vision Potion", 'b', x, y);

@@ -119,10 +119,9 @@ public class LevelGen {
      * This prevents the horizontal segment from running along a room's wall edge.
      */
     private static int clampRowOutsideRoom(int row, GameState.Room a, GameState.Room b) {
-        // If the row is exactly on a room's horizontal wall, shift it inward by 1
         for (GameState.Room r : new GameState.Room[]{a, b}) {
-            if (row == r.y)         row = r.y + 1;
-            if (row == r.y + r.h - 1) row = r.y + r.h - 2;
+            if (row == r.y)              row = r.y - 1;      // push above the room
+            if (row == r.y + r.h - 1)    row = r.y + r.h;    // push below the room
         }
         return row;
     }
@@ -133,22 +132,26 @@ public class LevelGen {
      */
     private static int clampColOutsideRoom(int col, GameState.Room a, GameState.Room b) {
         for (GameState.Room r : new GameState.Room[]{a, b}) {
-            if (col == r.x)         col = r.x + 1;
-            if (col == r.x + r.w - 1) col = r.x + r.w - 2;
+            if (col == r.x)              col = r.x - 1;
+            if (col == r.x + r.w - 1)    col = r.x + r.w;
         }
         return col;
     }
 
     static void carveH(int y, int x1, int x2) {
-        for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-            if (GameState.map[y][x] == GameState.TILE_EMPTY)
+        for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+            char t = GameState.map[y][x];
+            if (t == GameState.TILE_EMPTY || t == GameState.TILE_WALL)
                 GameState.map[y][x] = GameState.TILE_CORRIDOR;
+        }
     }
 
     static void carveV(int x, int y1, int y2) {
-        for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-            if (GameState.map[y][x] == GameState.TILE_EMPTY)
+        for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+            char t = GameState.map[y][x];
+            if (t == GameState.TILE_EMPTY || t == GameState.TILE_WALL)
                 GameState.map[y][x] = GameState.TILE_CORRIDOR;
+        }
     }
 
     static void convertWallsToDoors() {
@@ -227,24 +230,26 @@ public class LevelGen {
      * Pick a random world item to spawn.
      *
      * Weighted distribution across all item categories:
-     *   40% health potion
-     *   15% vision potion
-     *   15% ammo
-     *   10% knife or sword (melee weapon)
-     *   10% flashbang (throwable)
-     *   10% blinding chemical (science)
+     *   5% health potion
+     *   5% vision potion
+     *   5% ammo
+     *   5% knife or sword (melee weapon)
+     *   5% flashbang (throwable)
+     *   5% blinding chemical (science)
+     *   1%  artifact
      *
      * Ranged weapons (laser gun) are intentionally excluded from world spawns —
      * they only appear as monster drops to keep them rare.
      */
-    static Potion randomItem(int x, int y) {
+    static Item randomItem(int x, int y) {
         int roll = GameState.rng.nextInt(100);
-        if (roll < 40) return new HealthPotion(x, y);
-        if (roll < 55) return new VisionPotion(x, y);
-        if (roll < 70) return new AmmoPickup(x, y, 3 + GameState.rng.nextInt(5));
-        if (roll < 80) return new DroppedWeapon(x, y,
+        if (roll < 70) return new HealthPotion(x, y);
+        if (roll < 75) return new VisionPotion(x, y);
+        if (roll < 80) return new AmmoPickup(x, y, 3 + GameState.rng.nextInt(5));
+        if (roll < 85) return new DroppedWeapon(x, y,
                 GameState.rng.nextBoolean() ? new Knife() : new Sword());
         if (roll < 90) return new DroppedWeapon(x, y, new Flashbang());
+        if (roll == 99) return new ArtifactPickup(x, y);
         return             new DroppedWeapon(x, y, new BlindingChemical());
     }
 
@@ -252,7 +257,7 @@ public class LevelGen {
      * Kept for use by Combat.dropPotion() which specifically wants a consumable
      * potion drop (not a weapon) when an enemy dies.
      */
-    static Potion randomPotion(int x, int y) {
+    static Item randomPotion(int x, int y) {
         return GameState.rng.nextBoolean() ? new HealthPotion(x, y) : new VisionPotion(x, y);
     }
 
@@ -268,5 +273,39 @@ public class LevelGen {
                         ty >= 0 && ty < GameState.WORLD_H)
                     GameState.explored[ty][tx] = true;
             }
+    }
+    /**
+     * Randomly un-explore tiles outside the player's current sight radius.
+     *
+     * Called every move. Tiles within sight are never forgotten.
+     * Creates a gradual fog-decay where explored areas slowly fade back
+     * into darkness as the player moves away.
+     *
+     * @param cx     player's current world X
+     * @param cy     player's current world Y
+     * @param count  tiles to forget per move (tune for feel — try 3-8)
+     */
+    static void forgetRandom(int cx, int cy, int count) {
+        int decayBonus = (GameState.player != null ? GameState.player.getDecayFogBonus() : 0);
+        count += decayBonus;
+        int radius = GameState.SIGHT +
+                (GameState.player != null ? GameState.player.getSightBonus() : 0);
+        int forgotten   = 0;
+        int attempts    = 0;
+        int maxAttempts = count * 20;   // avoid infinite loop on a mostly-dark map
+
+        while (forgotten < count && attempts < maxAttempts) {
+            attempts++;
+            int tx = GameState.rng.nextInt(GameState.WORLD_W);
+            int ty = GameState.rng.nextInt(GameState.WORLD_H);
+
+            if (!GameState.explored[ty][tx]) continue;   // already dark, skip
+
+            int dist = Math.max(Math.abs(tx - cx), Math.abs(ty - cy));
+            if (dist <= radius) continue;   // inside safe zone, never forget
+
+            GameState.explored[ty][tx] = false;
+            forgotten++;
+        }
     }
 }

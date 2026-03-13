@@ -37,7 +37,8 @@ if [ -f "monsters.db" ]; then
     echo "[OK] monsters.db present — $COUNT monsters loaded"
 else
     echo "[ERR] monsters.db not found in current directory."
-    echo "      Copy it from the project root or run the seed script."
+    echo "Seeding monster.db : sqlite3 monsters.db < seed_monsters.sql"
+    sqlite3 monsters.db < seed_monsters.sql
     exit 1
 fi
 

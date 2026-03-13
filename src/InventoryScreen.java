@@ -57,7 +57,7 @@ public class InventoryScreen {
 
             // U — quick-use first potion (normal mode only)
             if ((key == 'u' || key == 'U') && !dropMode)
-                GameState.log(GameState.player.getInventory().usePotion(GameState.player));
+                GameState.log(GameState.player.getInventory().useItem(GameState.player));
         }
     }
 
@@ -118,24 +118,24 @@ public class InventoryScreen {
 
             if (relRow == 0) {
                 // ── Top border ────────────────────────────────────────────────
-                sb.append('┌');
+                sb.append(GameState.BUFFER + '┌');
                 String title = " ROGUE IN SPACE ";
                 int dashTotal = innerW + 2 - title.length();
                 int dashL = dashTotal / 2, dashR = dashTotal - dashL;
                 repeat(sb, '─', dashL);
                 sb.append(title);
                 repeat(sb, '─', dashR);
-                sb.append('┐');
+                sb.append('┐'+ GameState.BUFFER);
 
             } else if (relRow == outerH - 1) {
                 // ── Bottom border ─────────────────────────────────────────────
-                sb.append('└');
+                sb.append(GameState.BUFFER + '└');
                 int dashTotal = innerW + 2 - modeLabel.length();
                 int dashL = dashTotal / 2, dashR = dashTotal - dashL;
                 repeat(sb, '─', dashL);
                 sb.append(modeLabel);
                 repeat(sb, '─', dashR);
-                sb.append('┘');
+                sb.append('┘' + GameState.BUFFER);
 
             } else {
                 // ── Content row ───────────────────────────────────────────────
@@ -144,10 +144,10 @@ public class InventoryScreen {
                 if (line.length() > innerW)
                     line = line.substring(0, innerW);
                 int rightPad = innerW - line.length();
-                sb.append("│ ");
+                sb.append(GameState.BUFFER + "│ ");
                 sb.append(line);
                 repeat(sb, ' ', rightPad);
-                sb.append(" │");
+                sb.append(" │" + GameState.BUFFER);
             }
         }
 
@@ -174,9 +174,9 @@ public class InventoryScreen {
 
         if (awaitPotion) {
             if (dropMode) {
-                Potion dropped = inv.dropPotion(idx);
+                Item dropped = inv.dropItem(idx);
                 if (dropped == null) {
-                    GameState.log("No potion in slot " + (idx + 1) + ".");
+                    GameState.log("No items in slot " + (idx + 1) + ".");
                 } else {
                     dropped.worldX   = GameState.player.getWorldX();
                     dropped.worldY   = GameState.player.getWorldY();
@@ -185,11 +185,11 @@ public class InventoryScreen {
                     GameState.log("Dropped " + dropped.getName() + " at your feet.");
                 }
             } else {
-                List<Potion> potions = inv.getPotions();
-                if (idx >= potions.size()) {
-                    GameState.log("No potion in slot " + (idx + 1) + ".");
+                List<Item> items = inv.getItems();
+                if (idx >= items.size()) {
+                    GameState.log("No items in slot " + (idx + 1) + ".");
                 } else {
-                    GameState.log(potions.remove(idx).use(GameState.player));
+                    GameState.log(items.remove(idx).use(GameState.player));
                 }
             }
         } else {

@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -31,7 +32,7 @@ public class Renderer {
         if (lines == null) return;   // border file missing — silent fallback
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\033[H");   // cursor to top-left
+        sb.append(GameState.ESC + "[H");   // cursor to top-left
 
         // Stop before the bottom content rows (status bar + log) so stampBorder
         // never erases HUD text that render() wrote into the bottom border wall.
@@ -47,7 +48,7 @@ public class Renderer {
                 for (int i = line.length(); i < GameState.BORDER_FILE_W; i++)
                     sb.append(' ');
             }
-            sb.append("\033[K\n");
+            sb.append(GameState.ESC + "[K\n");
         }
 
         System.out.print(sb);
@@ -74,13 +75,13 @@ public class Renderer {
         int py = GameState.player.getWorldY();
 
         // ── World viewport ────────────────────────────────────────────────────
-        for (int vy = 0; vy < GameState.VIEW_H; vy++) {
+        for (int vy = 0; vy < GameState.VIEW_H + 1; vy++) {
             // Move cursor to the start of this viewport row
             int termRow = GameState.VIEWPORT_ROW + vy + 1;   // 1-based
             int termCol = GameState.VIEWPORT_COL + 1;         // 1-based
-            sb.append(String.format("\033[%d;%dH", termRow, termCol));
+            sb.append(String.format(GameState.ESC + "[%d;%dH", termRow, termCol));
 
-            for (int vx = 0; vx < GameState.VIEW_W; vx++) {
+            for (int vx = 0; vx < GameState.VIEW_W + 1; vx++) {
                 int wx = px + (vx - GameState.VIEW_CX);
                 int wy = py + (vy - GameState.VIEW_CY);
 
@@ -96,7 +97,7 @@ public class Renderer {
                     if (e != null) {
                         sb.append(e.getGlyph());
                     } else {
-                        Potion item = GameState.itemAt(wx, wy);
+                        Item item = GameState.itemAt(wx, wy);
                         if (item != null) {
                             sb.append(item.getGlyph());
                         } else {
@@ -113,41 +114,26 @@ public class Renderer {
             }
         }
 
-        // ── Status bar and log — centred inside the bottom border wall ─────────
-        //
-        // Bottom border occupies the last BORDER_BOTTOM rows of the file.
-        // We use the first two of those rows for content, leaving the very
-        // bottom wall row (row BORDER_FILE_H, 1-based) as untouched border art.
-        //
-        //   ANSI row BORDER_FILE_H - 2  →  status bar   (3rd to last row)
-        //   ANSI row BORDER_FILE_H - 1  →  combat log   (2nd to last row)
-        //   ANSI row BORDER_FILE_H      →  bottom wall  (untouched)
-        //
-        // Both lines are centred within the inner viewport width (VIEW_W).
-        // The left padding pushes text to start at VIEWPORT_COL, then we
-        // calculate additional padding to centre the text within VIEW_W.
+        // ── Status bar, log, artifacts — below the border frame ─────────────
+        // Rows start at BORDER_FILE_H + 1 (1-based), safely below the border.
+        // centredInViewport centres within VIEW_W using VIEWPORT_COL offset.
 
-        int statusBarAnsiRow = GameState.BORDER_FILE_H - 1;   // 3rd to last
-        int logAnsiRow       = GameState.BORDER_FILE_H;   // 2nd to last
+        int statusBarAnsiRow = GameState.BORDER_FILE_H + 1;
+        int logAnsiRow       = GameState.BORDER_FILE_H + 2;
+        int artifactsAnsiRow = GameState.BORDER_FILE_H + 3;
 
-        // ── Status bar ────────────────────────────────────────────────────────
-        String statusText = GameState.player.getStatusBar().trim();
-        sb.append(centredInViewport(statusText, statusBarAnsiRow));
+        sb.append(centredInViewport(
+                GameState.C_WHITE + GameState.player.getStatusBar().trim() + GameState.C_RESET,
+                statusBarAnsiRow));
 
-        // ── Combat log (2 lines, each centred) ───────────────────────────────
-        for (int i = 0; i < GameState.LOG_SIZE; i++) {
-            String logText = (i < GameState.combatLog.size())
-                    ? GameState.combatLog.get(i).trim() : "";
-            // All log lines share the same row — build a single combined line
-            // if there are two entries, otherwise just centre the one we have.
-            // We only have 1 row for the log (logAnsiRow) with LOG_SIZE=2 entries
-            // shown as:  entry0  |  entry1
-            if (i == 0) {
-                String combined = buildLogLine();
-                sb.append(centredInViewport(combined, logAnsiRow));
-                break;   // both entries handled in one pass
-            }
-        }
+        if (!GameState.combatLog.isEmpty())
+            sb.append(centredInViewport(
+                    GameState.C_RED + buildLogLine() + GameState.C_RESET,
+                    logAnsiRow));
+
+        sb.append(centredInViewport(
+                GameState.C_PURPLE + "Artifacts: " + GameState.artifactsCollected + GameState.C_RESET,
+                artifactsAnsiRow));
 
         System.out.print(sb);
         System.out.flush();
@@ -165,15 +151,56 @@ public class Renderer {
      * If the text is wider than VIEW_W it is truncated.
      */
     static String centredInViewport(String text, int ansiRow) {
-        if (text.length() > GameState.VIEW_W)
-            text = text.substring(0, GameState.VIEW_W);
+        int visibleLen = visibleLength(text);
 
-        int leftPad = (GameState.VIEW_W - text.length()) / 2;
-        int termCol = GameState.VIEWPORT_COL + leftPad + 1;   // 1-based
+        if (visibleLen > GameState.VIEW_W) {
+            text = truncateVisible(text, GameState.VIEW_W);
+            visibleLen = GameState.VIEW_W;
+        }
 
-        // Jump directly to the centred position and write — no clearing.
-        // The border characters on either side are left completely untouched.
-        return String.format("\033[%d;%dH", ansiRow, termCol) + text;
+        int leftPad  = (GameState.VIEW_W - visibleLen) / 2;
+        int termCol  = GameState.VIEWPORT_COL + leftPad + 1;
+        int clearCol = GameState.VIEWPORT_COL + 1;
+
+        // Clear exactly VIEW_W characters first so stale text from any
+        // previously longer string is erased, without touching border walls.
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format(GameState.ESC + "[%d;%dH", ansiRow, clearCol));
+        for (int i = 0; i < GameState.VIEW_W; i++) sb.append(' ');
+        sb.append(String.format(GameState.ESC + "[%d;%dH", ansiRow, termCol));
+        sb.append(text);
+        return sb.toString();
+    }
+
+    /** Count printable characters, skipping ESC[...m sequences. */
+    private static int visibleLength(String s) {
+        int count = 0;
+        boolean inEsc = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == (char)27) { inEsc = true; continue; }
+            if (inEsc) { if (c == 'm') inEsc = false; continue; }
+            count++;
+        }
+        return count;
+    }
+
+    /** Truncate to maxVisible printable characters, preserving escape codes. */
+    private static String truncateVisible(String s, int maxVisible) {
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        boolean inEsc = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == (char)27) { inEsc = true; sb.append(c); continue; }
+            if (inEsc) { sb.append(c); if (c == 'm') inEsc = false; continue; }
+            if (count >= maxVisible) break;
+            sb.append(c);
+            count++;
+        }
+        // Always close with a reset so colours don't bleed into border
+        sb.append(GameState.C_RESET);
+        return sb.toString();
     }
 
     /**
@@ -184,10 +211,7 @@ public class Renderer {
      */
     private static String buildLogLine() {
         if (GameState.combatLog.isEmpty()) return "";
-        if (GameState.combatLog.size() == 1) return GameState.combatLog.get(0).trim();
-        return GameState.combatLog.get(0).trim()
-                + "   |   "
-                + GameState.combatLog.get(1).trim();
+        return GameState.combatLog.get(0).trim();
     }
 
     // ── Sprite loading ────────────────────────────────────────────────────────
@@ -202,7 +226,7 @@ public class Renderer {
 
         try {
             List<String> lines = Files.readAllLines(
-                    Paths.get(GameState.ASSETS_DIR + "/" + key + ".txt"));
+                    Paths.get(GameState.ASSETS_DIR + key + ".txt"));
             GameState.spriteCache.put(key, lines);
             return lines;
         } catch (IOException e) {
@@ -227,11 +251,11 @@ public class Renderer {
         int startLine = (lines.size() > GameState.VIEW_H)
                 ? (lines.size() - GameState.VIEW_H) / 2 : 0;
 
-        for (int row = 0; row < GameState.VIEW_H; row++) {
+        for (int row = 0; row < GameState.VIEW_H + 1; row++) {
             // Position cursor at the correct terminal cell for this viewport row
             int termRow = GameState.VIEWPORT_ROW + row + 1;   // 1-based
             int termCol = GameState.VIEWPORT_COL + 1;          // 1-based
-            sb.append(String.format("\033[%d;%dH", termRow, termCol));
+            sb.append(String.format(GameState.ESC + "[%d;%dH", termRow, termCol));
 
             int srcRow = startLine + row;
             String line = (srcRow < lines.size()) ? lines.get(srcRow) : "";
@@ -242,7 +266,7 @@ public class Renderer {
 
             sb.append(line);
             // Pad remaining cols with spaces so stale characters are cleared
-            for (int i = line.length(); i < GameState.VIEW_W; i++) sb.append(' ');
+            // for (int i = line.length(); i < GameState.VIEW_W; i++) sb.append(' ');
         }
 
         System.out.print(sb);
@@ -251,6 +275,45 @@ public class Renderer {
 
     // ── Hit animation ─────────────────────────────────────────────────────────
 
+
+    // ── Animated encounter display ────────────────────────────────────────────
+
+    /**
+     * Display an animated encounter sequence from a folder.
+     * Looks for files matching pattern: enemyName-000.txt, enemyName-001.txt, etc.
+     * Displays each frame for 125ms (1/8 second).
+     * Returns true if animation was displayed, false if folder doesn't exist.
+     */
+    static boolean showEncounterAnimation(String enemyName) {
+        String folderPath = GameState.ASSETS_DIR + enemyName.toLowerCase() + "-encounter";
+        File folder = new File(folderPath);
+
+        if (!folder.exists() || !folder.isDirectory()) {
+            return false;
+        }
+
+        File[] files = folder.listFiles((dir, name) ->
+                name.matches(enemyName.toLowerCase() + "_\\d{3}\\.txt"));
+
+        if (files == null || files.length == 0) {
+            return false;
+        }
+
+        // Sort files numerically
+        java.util.Arrays.sort(files, (f1, f2) -> f1.getName().compareTo(f2.getName()));
+
+        try {
+            for (File file : files) {
+                List<String> lines = Files.readAllLines(file.toPath());
+                renderSprite(lines);
+                Thread.sleep(125); // 1/8 second
+            }
+            return true;
+        } catch (IOException | InterruptedException e) {
+            return false;
+        }
+    }
+
     /**
      * Flash normal → negative sprite inside the viewport when an enemy hits.
      * Falls back silently if either sprite file is missing.
@@ -258,6 +321,11 @@ public class Renderer {
      * Total duration: ~500ms (250ms per frame).
      */
     static void showHitAnimation(Enemy e) {
+
+        // Try to show encounter animation first
+        if (showEncounterAnimation(e.getName())) { return; }
+
+        // If false fallback
         List<String> normal   = loadSprite(e.getName().toLowerCase());
         List<String> negative = loadSprite(e.getName().toLowerCase() + "-neg");
         if (normal == null || negative == null) return;
@@ -270,9 +338,5 @@ public class Renderer {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
-
-        // Re-stamp the border in case any sprite character bled outside the
-        // viewport (e.g. a line that was longer than VIEW_W before truncation).
-        stampBorder();
     }
 }

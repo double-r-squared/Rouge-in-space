@@ -37,11 +37,11 @@ public class InventoryTest {
         Inventory inv = new Inventory(PlayerClass.ENGINEER);
         Player p = new Player("Pilot", PlayerClass.PILOT, 0, 0);
 
-        assertTrue(inv.stashPotion(new HealthPotion(0, 0)));
-        assertEquals(1, inv.getPotions().size());
+        assertTrue(inv.stashItem(new HealthPotion(0, 0)));
+        assertEquals(1, inv.getItems().size());
 
-        String msg = inv.usePotion(p);
-        assertEquals(0, inv.getPotions().size());
+        String msg = inv.useItem(p);
+        assertEquals(0, inv.getItems().size());
         assertTrue(msg.contains("Health Potion") || msg.contains("recover"));
     }
 

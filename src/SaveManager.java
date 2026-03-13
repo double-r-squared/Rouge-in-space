@@ -62,7 +62,9 @@ public class SaveManager {
         sb.append("    \"version\": ").append(SAVE_VERSION).append(",\n");
         sb.append("    \"savedAt\": \"").append(Instant.now()).append("\",\n");
         sb.append("    \"timePlayed\": \"").append(GameState.formatTimePlayed()).append("\",\n");
-        sb.append("    \"timePlayedMillis\": ").append(GameState.totalPlayedMillis()).append("\n");
+        sb.append("    \"timePlayedMillis\": ").append(GameState.totalPlayedMillis()).append(",\n");
+        sb.append("    \"enemiesKilled\": ").append(GameState.enemiesKilled).append(",\n");
+        sb.append("    \"levelsCleared\": ").append(GameState.levelsCleared).append("\n");
         sb.append("  },\n");
 
         // ── Player ────────────────────────────────────────────────────────────
@@ -81,7 +83,10 @@ public class SaveManager {
         sb.append("  \"enemies\": ").append(serializeEnemies()).append(",\n");
 
         // ── Items ─────────────────────────────────────────────────────────────
-        sb.append("  \"items\": ").append(serializeItems()).append("\n");
+        sb.append("  \"items\": ").append(serializeItems()).append(",\n");
+
+        // ── Artifacts ────────────────────────────────────────────────────────
+        sb.append("  \"artifacts\": ").append(GameState.artifactsCollected).append("\n");
 
         sb.append("}\n");
 
@@ -92,6 +97,7 @@ public class SaveManager {
     // ── Load ──────────────────────────────────────────────────────────────────
 
     public static void load(String path) throws IOException {
+        @SuppressWarnings("All")
         String json = Files.readString(Paths.get(path));
         Map<String, String> root = parseObject(json);
 
@@ -100,13 +106,13 @@ public class SaveManager {
         long savedMillis = Long.parseLong(meta.get("timePlayedMillis").trim());
         GameState.previouslyPlayed = savedMillis;
         GameState.sessionStart     = System.currentTimeMillis();
+        GameState.enemiesKilled    = Integer.parseInt(meta.getOrDefault("enemiesKilled", "0").trim());
+        GameState.levelsCleared    = Integer.parseInt(meta.getOrDefault("levelsCleared", "0").trim());
 
         // ── Map ───────────────────────────────────────────────────────────────
         Map<String, String> mapObj = parseObject(root.get("map"));
-        GameState.map      = rleDecodeTiles(mapObj.get("tiles").trim()
-                .replace("\"", ""));
-        GameState.explored  = decodeExplored(mapObj.get("explored").trim()
-                .replace("\"", ""));
+        GameState.map = rleDecodeTiles(mapObj.get("tiles").replace("\"", ""));
+        GameState.explored  = decodeExplored(mapObj.get("explored").replace("\"", ""));
 
         // ── Rooms ─────────────────────────────────────────────────────────────
         GameState.rooms.clear();
@@ -144,14 +150,18 @@ public class SaveManager {
         // ── Items ─────────────────────────────────────────────────────────────
         GameState.items.clear();
         for (Map<String, String> item : parseArrayOfObjects(root.get("items"))) {
-            Potion p = deserializeItem(item);
+            Item p = deserializeItem(item);
             if (p != null) GameState.items.add(p);
         }
 
-        // ── Player ───────────────────────────────────────────────────────────
-        deserializePlayer(parseObject(root.get("player")));
+        // ── Artifacts ────────────────────────────────────────────────────────
+        if (root.containsKey("artifacts"))
+            GameState.artifactsCollected = Integer.parseInt(root.get("artifacts").trim());
 
-        GameState.combatLog.clear();
+        // ── Player ───────────────────────────────────────────────────────────
+        String playerJson = root.get("player");
+        if (playerJson == null) throw new IOException("missing player key");
+        deserializePlayer(parseObject(playerJson));
         GameState.log("Save loaded.  Time played: " + GameState.formatTimePlayed());
     }
 
@@ -172,6 +182,7 @@ public class SaveManager {
         sb.append("    \"def\": ").append(p.getDefense()).append(",\n");
         sb.append("    \"hit\": ").append(p.getHitChance()).append(",\n");
         sb.append("    \"sightBonus\": ").append(p.getSightBonus()).append(",\n");
+        sb.append("    \"decay\": ").append(p.getDecay()).append(",\n");
         sb.append("    \"level\": ").append(p.getLevel()).append(",\n");
         sb.append("    \"xp\": ").append(p.getExperience()).append(",\n");
         sb.append("    \"xpToNext\": ").append(p.getExpToNext()).append(",\n");
@@ -198,12 +209,12 @@ public class SaveManager {
         }
         sb.append("],\n");
 
-        // Potions (stashed in inventory, not on the floor)
-        sb.append("      \"potions\": [");
-        List<Potion> potions = inv.getPotions();
-        for (int i = 0; i < potions.size(); i++) {
-            sb.append("\"").append(potions.get(i).getClass().getSimpleName()).append("\"");
-            if (i < potions.size() - 1) sb.append(", ");
+        // Items (stashed in inventory, not on the floor)
+        sb.append("      \"items\": [");
+        List<Item> items = inv.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            sb.append("\"").append(items.get(i).getClass().getSimpleName()).append("\"");
+            if (i < items.size() - 1) sb.append(", ");
         }
         sb.append("]\n");
         sb.append("    }");
@@ -247,27 +258,27 @@ public class SaveManager {
     private static String serializeItems() {
         StringBuilder sb = new StringBuilder("[\n");
         boolean first = true;
-        for (Potion p : GameState.items) {
-            if (p.isConsumed()) continue;
+        for (Item i : GameState.items) {
+            if (i.isConsumed()) continue;
             if (!first) sb.append(",\n");
-            if (p instanceof DroppedWeapon) {
-                // Need the weapon class name to reconstruct on load
-                String wClass = p.getName();   // DroppedWeapon.name = weaponClass
+            if (i instanceof DroppedWeapon) {
+                // Use the wrapped weapon's class name (not display name) for round-trip safety
+                String wClass = ((DroppedWeapon) i).getWeapon().getClass().getSimpleName();
                 sb.append("    {\"type\":\"DroppedWeapon\",\"weapon\":\"")
                         .append(esc(wClass)).append("\"")
-                        .append(",\"x\":").append(p.getWorldX())
-                        .append(",\"y\":").append(p.getWorldY()).append("}");
-            } else if (p instanceof AmmoPickup) {
+                        .append(",\"x\":").append(i.getWorldX())
+                        .append(",\"y\":").append(i.getWorldY()).append("}");
+            } else if (i instanceof AmmoPickup) {
                 // Parse qty back from name "Ammo xN"
-                String[] parts = p.getName().split("x");
+                String[] parts = i.getName().split("x");
                 int qty = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 1;
                 sb.append("    {\"type\":\"AmmoPickup\",\"qty\":").append(qty)
-                        .append(",\"x\":").append(p.getWorldX())
-                        .append(",\"y\":").append(p.getWorldY()).append("}");
+                        .append(",\"x\":").append(i.getWorldX())
+                        .append(",\"y\":").append(i.getWorldY()).append("}");
             } else {
-                sb.append("    {\"type\":\"").append(p.getClass().getSimpleName()).append("\"")
-                        .append(",\"x\":").append(p.getWorldX())
-                        .append(",\"y\":").append(p.getWorldY()).append("}");
+                sb.append("    {\"type\":\"").append(i.getClass().getSimpleName()).append("\"")
+                        .append(",\"x\":").append(i.getWorldX())
+                        .append(",\"y\":").append(i.getWorldY()).append("}");
             }
             first = false;
         }
@@ -295,19 +306,20 @@ public class SaveManager {
         int    savedDef      = Integer.parseInt(p.get("def").trim());
         double savedHit      = Double.parseDouble(p.get("hit").trim());
         int    savedSight    = Integer.parseInt(p.get("sightBonus").trim());
+        double savedDecay    = p.containsKey("decay") ? Double.parseDouble(p.get("decay").trim()) : 0.0;
         int    savedLevel    = Integer.parseInt(p.get("level").trim());
         int    savedXp       = Integer.parseInt(p.get("xp").trim());
         int    savedXpToNext = Integer.parseInt(p.get("xpToNext").trim());
         int    savedGold     = Integer.parseInt(p.get("gold").trim());
 
         player.restoreStats(savedHp, savedMaxHp, savedAtk, savedDef,
-                savedHit, savedSight, savedLevel,
+                savedHit, savedSight, savedDecay, savedLevel,
                 savedXp, savedXpToNext, savedGold);
+
+        GameState.player = player;   // assign before inventory so any throw leaves a valid player
 
         // Restore inventory
         deserializeInventory(parseObject(p.get("inventory")), player.getInventory());
-
-        GameState.player = player;
     }
 
     private static void deserializeInventory(Map<String, String> inv, Inventory inventory) {
@@ -331,19 +343,19 @@ public class SaveManager {
         int activeIdx = Integer.parseInt(inv.get("activeIndex").trim());
         inventory.equipWeapon(activeIdx);
 
-        // Stashed potions
-        String potionsRaw = inv.get("potions").trim();
-        potionsRaw = potionsRaw.replaceAll("[\\[\\]\\s]", "");
-        if (!potionsRaw.isEmpty()) {
-            for (String pClass : potionsRaw.split(",")) {
+        // Stashed items
+        String itemsRaw = inv.get("items").trim();
+        itemsRaw = itemsRaw.replaceAll("[\\[\\]\\s]", "");
+        if (!itemsRaw.isEmpty()) {
+            for (String pClass : itemsRaw.split(",")) {
                 pClass = pClass.replace("\"", "").trim();
-                Potion pot = instantiatePotion(pClass, 0, 0);
-                if (pot != null) inventory.stashPotion(pot);
+                Item pot = instantiateItem(pClass, 0, 0);
+                if (pot != null) inventory.stashItem(pot);
             }
         }
     }
 
-    private static Potion deserializeItem(Map<String, String> item) {
+    private static Item deserializeItem(Map<String, String> item) {
         String type = item.get("type").trim().replace("\"", "");
         int x = Integer.parseInt(item.get("x").trim());
         int y = Integer.parseInt(item.get("y").trim());
@@ -351,7 +363,8 @@ public class SaveManager {
             case "DroppedWeapon":
                 String wClass = item.get("weapon").trim().replace("\"", "");
                 Weapon w = instantiateWeapon(wClass);
-                return w != null ? new DroppedWeapon(x, y, w) : null;
+                if (w == null) { System.err.println("[SaveManager] Skipping DroppedWeapon with unknown class: " + wClass); return null; }
+                return new DroppedWeapon(x, y, w);
             case "AmmoPickup":
                 int qty = Integer.parseInt(item.get("qty").trim());
                 return new AmmoPickup(x, y, qty);
@@ -390,12 +403,20 @@ public class SaveManager {
         String[] rows = encoded.split("\\|");
         for (int y = 0; y < rows.length && y < GameState.WORLD_H; y++) {
             int x = 0;
-            for (String run : rows[y].split(",")) {
-                String[] parts = run.split(":", 2);
-                if (parts.length < 2) continue;
-                int  count = Integer.parseInt(parts[0]);
-                char ch    = parts[1].charAt(0);
-                for (int i = 0; i < count && x < GameState.WORLD_W; i++)
+            String row = rows[y];
+            int i = 0;
+            while (i < row.length() && x < GameState.WORLD_W) {
+                // read count digits
+                int numStart = i;
+                while (i < row.length() && Character.isDigit(row.charAt(i))) i++;
+                if (i >= row.length()) break;
+                int count = Integer.parseInt(row.substring(numStart, i));
+                i++; // skip ':'
+                if (i >= row.length()) break;
+                char ch = row.charAt(i);
+                i++; // skip char
+                if (i < row.length() && row.charAt(i) == ',') i++; // skip separator comma
+                for (int k = 0; k < count && x < GameState.WORLD_W; k++)
                     result[y][x++] = ch;
             }
         }
@@ -449,7 +470,6 @@ public class SaveManager {
             case "Flashbang":        return new Flashbang();
             case "LaserGun":         return new LaserGun();
             case "RayGun":           return new RayGun();
-//            case "Pistol":           return new Pistol();
             case "BlindingChemical": return new BlindingChemical();
             default:
                 System.err.println("[SaveManager] Unknown weapon class: " + className);
@@ -457,12 +477,12 @@ public class SaveManager {
         }
     }
 
-    private static Potion instantiatePotion(String className, int x, int y) {
+    private static Item instantiateItem(String className, int x, int y) {
         switch (className) {
             case "HealthPotion": return new HealthPotion(x, y);
             case "VisionPotion": return new VisionPotion(x, y);
             default:
-                System.err.println("[SaveManager] Unknown potion class: " + className);
+                System.err.println("[SaveManager] Unknown item class: " + className);
                 return null;
         }
     }

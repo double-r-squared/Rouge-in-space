@@ -48,13 +48,11 @@ DELETE FROM monsters;
 
 INSERT INTO monsters (name, glyph, max_health, attack_power, hit_chance, sight_range, sees_through_doors, xp_value, drop_table, description) VALUES
     ('Zombie',   'Z', 40,  8,  0.55, 4,  0, 15, 'zombie',   'A shambling corpse. Nearly blind, but relentless.'),
-    ('Mutant',   'A', 20,  12, 0.75, 7,  0, 10, 'mutant',   'Twitchy and alert. Hits hard for its size.'),
-    ('Skeleton', 'S', 15,  6,  0.90, 12, 0,  9, 'skeleton', 'Pinpoint accuracy. Longest sight range of any common foe.'),
-    ('Troll',    'T', 80,  18, 0.60, 5,  0, 25, 'troll',    'Massive and brutal. Poor sight, devastating if it reaches you.'),
+    ('Mutant',   'a', 20,  12, 0.75, 7,  0, 10, 'mutant',   'Twitchy and alert. Hits hard for its size.'),
     ('Ghost',    'G', 18,  14, 0.50, 9,  1, 12, 'ghost',    'Passes silently through doors. Drops only chemicals.'),
-    ('Snake',    's', 25,  9,  0.80, 6,  0, 11, 'snake',    'Low profile, quick strike. Hard to spot in corridors.'),
-    ('Titan',    'X', 120, 22, 0.65, 6,  0, 40, 'titan',    'Rare. Enormous. Do not engage without ranged weapons.'),
-    ('Eye',      'e', 30,  11, 0.70, 10, 0, 18, 'eye',      'Hovering orb with wide vision. Favours chemical drops.');
+    ('Snake',    'S', 25,  9,  0.80, 6,  0, 11, 'snake',    'Low profile, quick strike. Hard to spot in corridors.'),
+    ('Titan',    'T', 120, 22, 0.65, 6,  0, 40, 'titan',    'Rare. Enormous. Do not engage without ranged weapons.'),
+    ('Eye',      'o', 30,  11, 0.70, 10, 0, 18, 'eye',      'Hovering orb with wide vision. Favours chemical drops... of the blinding variety.');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- To add a new monster, just append an INSERT here and re-run this script.

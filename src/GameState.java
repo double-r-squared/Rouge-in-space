@@ -34,9 +34,10 @@ public class GameState {
     static int VIEW_H;
     static int VIEW_CX;
     static int VIEW_CY;
+    static String BUFFER = "      ";
 
     // ── Vision radius ─────────────────────────────────────────────────────────
-    static final int SIGHT = 4;
+    static final int SIGHT = 2;
 
     // ── Tile types ────────────────────────────────────────────────────────────
     static final char TILE_EMPTY    = ' ';
@@ -54,17 +55,25 @@ public class GameState {
     // ── Entities ──────────────────────────────────────────────────────────────
     static Player       player;
     static List<Enemy>  enemies  = new ArrayList<>();
-    static List<Potion> items    = new ArrayList<>();
+    static List<Item>   items    = new ArrayList<>();
     static List<Room>   rooms    = new ArrayList<>();
     static Random       rng      = new Random();
 
     // ── Combat log ────────────────────────────────────────────────────────────
-    static final int    LOG_SIZE  = 2;   // fits in 2 rows of the bottom border wall
+    static final int    LOG_SIZE  = 1;
     static List<String> combatLog = new ArrayList<>();
+
+    // ── ANSI colour constants ─────────────────────────────────────────────────
+    static final String ESC      = String.valueOf((char)27);
+    static final String C_RESET  = ESC + "[0m";
+    static final String C_WHITE  = ESC + "[97m";
+    static final String C_RED    = ESC + "[91m";   // player HP, enemy damage numbers
+    static final String C_PURPLE = ESC + "[95m";   // artifact line
 
     // ── Session stats ─────────────────────────────────────────────────────────
     static int  enemiesKilled = 0;
     static int  levelsCleared = 0;
+    static int  artifactsCollected = 0;
 
     // ── Session timer ─────────────────────────────────────────────────────────
     // sessionStart is set when the game begins or a save is loaded.
@@ -85,8 +94,13 @@ public class GameState {
     }
 
     // ── Sprite cache ──────────────────────────────────────────────────────────
-    static final String                    ASSETS_DIR   = "assets";
-    static final Map<String, List<String>> spriteCache  = new HashMap<>();
+    static final String                    ASSETS_DIR  = "../assets/";
+    static final String                    DB_DIR      = "../db/";
+    static final String                    MONSTER_DB  = DB_DIR + "monsters.db";
+    static final String                    PLAYER_DB   = DB_DIR + "players.db";  //TODO: REMOVE HARD CODED PLAYER SUBCLASSES AND USE THE FACTORY PATTERN
+    static final String                    ITEM_DB     = DB_DIR + "items.db";    //TODO: REMOVE HARD CODED ITEM SUBCLASSES AND USE THE FACTORY PATTERN
+    static final String                    WEAPON_DB     = DB_DIR + "items.db";  //TODO: REMOVE HARD CODED ITEM SUBCLASSES AND USE THE FACTORY PATTERN
+    static final Map<String, List<String>> spriteCache = new HashMap<>();
 
     // ─────────────────────────────────────────────────────────────────────────
     // Room  –  axis-aligned rectangle used by level generation
@@ -127,10 +141,10 @@ public class GameState {
         return null;
     }
 
-    static Potion itemAt(int x, int y) {
-        for (Potion p : items)
-            if (!p.isConsumed() && p.getWorldX() == x && p.getWorldY() == y)
-                return p;
+    static Item itemAt(int x, int y) {
+        for (Item i : items)
+            if (!i.isConsumed() && i.getWorldX() == x && i.getWorldY() == y)
+                return i;
         return null;
     }
 }

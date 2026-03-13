@@ -65,7 +65,6 @@ public class SaveScreen {
             int termRow = GameState.VIEWPORT_ROW + boxTop + rel + 1;   // 1-based
             int termCol = GameState.VIEWPORT_COL + boxLeft + 1;        // 1-based
             sb.append(String.format("\033[%d;%dH", termRow, termCol));
-
             if (rel == 0) {
                 // Top border
                 String title = " SAVE GAME ";
@@ -139,7 +138,7 @@ public class SaveScreen {
         lines.add(String.format("  Active weapon    %-20s",
                 w != null ? w.getWeaponClass() : "Bare Hands"));
         lines.add(String.format("  Weapons          %d carried",   inv.getWeapons().size()));
-        lines.add(String.format("  Potions          %d stashed",   inv.getPotions().size()));
+        lines.add(String.format("  Items            %d stashed",   inv.getItems().size()));
         lines.add(String.format("  Ammo             %d rounds",    inv.getAmmo().getCount()));
         lines.add(String.format("  Weight           %.1f / %.0f kg",
                 inv.currentWeight(), inv.getMaxWeight()));

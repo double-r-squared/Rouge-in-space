@@ -1,4 +1,4 @@
-/**
+package test; /**
  * Test for SaveManager behavior.
  */
 import org.junit.jupiter.api.Test;
@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SaveManagerTest {
@@ -26,7 +28,7 @@ public class SaveManagerTest {
         boolean[][] originalExplored = GameState.explored;
         java.util.List<GameState.Room> originalRooms = GameState.rooms;
         java.util.List<Enemy> originalEnemies = GameState.enemies;
-        java.util.List<Potion> originalItems = GameState.items;
+        java.util.List<Item> originalItems = GameState.items;
         java.util.List<String> originalLog = GameState.combatLog;
 
         Path tmpDir = Files.createTempDirectory("ris-save-roundtrip");
@@ -75,7 +77,7 @@ public class SaveManagerTest {
         boolean[][] originalExplored = GameState.explored;
         java.util.List<GameState.Room> originalRooms = GameState.rooms;
         java.util.List<Enemy> originalEnemies = GameState.enemies;
-        java.util.List<Potion> originalItems = GameState.items;
+        List<Item> originalItems = GameState.items;
         java.util.List<String> originalLog = GameState.combatLog;
 
         Path tmpDir = Files.createTempDirectory("ris-save-json");

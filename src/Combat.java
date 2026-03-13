@@ -32,6 +32,7 @@ public class Combat {
         if (tile == GameState.TILE_WALL || tile == GameState.TILE_EMPTY) return false;
         GameState.player.move(dx, dy);
         LevelGen.revealAround(GameState.player.getWorldX(), GameState.player.getWorldY());
+        LevelGen.forgetRandom(GameState.player.getWorldX(), GameState.player.getWorldY(), GameState.player.getDecayFogBonus());
         return true;
     }
 
@@ -52,17 +53,9 @@ public class Combat {
             GameState.enemiesKilled++;
             GameState.log(e.getName() + " is defeated! +" + xp + " XP");
             rollDrop(e);
-            return;
         }
-
-        int enemyDmg = e.attack(p);
-        if (enemyDmg == 0) {
-            GameState.log(e.getName() + " attacks but misses you.");
-        } else {
-            GameState.log(e.getName() + " hits you for " + enemyDmg + " dmg. ("
-                    + p.getCurrentHealth() + "/" + p.getMaxHealth() + " HP left)");
-            Renderer.showHitAnimation(e);
-        }
+        // Enemy counter-attack handled exclusively by tickEnemies() so the
+        // enemy never gets two attacks on a player-initiated melee turn.
     }
 
     /** XP reward is defined per-monster in the DB, not derived from stats. */
@@ -87,10 +80,15 @@ public class Combat {
                 if (dmg == 0) {
                     GameState.log(e.getName() + " lunges but misses you.");
                 } else {
-                    GameState.log(e.getName() + " hits you for " + dmg + " dmg. ("
+                    GameState.log( e.getName() + " hits you for "
+                            + dmg + " dmg. ("
                             + GameState.player.getCurrentHealth() + "/"
-                            + GameState.player.getMaxHealth() + " HP left)");
+                            + GameState.player.getMaxHealth() + " HP left)"
+                            );
                     Renderer.showHitAnimation(e);
+                    // Taking damage spikes decay — immediately forget extra tiles
+                    LevelGen.forgetRandom(GameState.player.getWorldX(),
+                            GameState.player.getWorldY(), 10);
                 }
             } else {
                 e.stepToward(GameState.player, GameState.map, GameState.enemies);
@@ -102,11 +100,9 @@ public class Combat {
 
     /**
      * Roll for item drop on enemy death.
-     *
      * The drop_table column in monsters.db maps each monster to a loot
      * behaviour key.  Adding a new monster only requires a DB row — no
      * Java changes needed here.
-     *
      * Drop table keys:
      *   zombie   – mostly potions, some melee, some ammo
      *   mutant   – mostly melee, some potions, some throwables
@@ -164,9 +160,9 @@ public class Combat {
     }
 
     static void dropPotion(int x, int y) {
-        Potion p = LevelGen.randomPotion(x, y);
-        GameState.items.add(p);
-        GameState.log("Dropped: " + p.getName() + " at your feet. (E to pick up)");
+        Item i = LevelGen.randomPotion(x, y);
+        GameState.items.add(i);
+        GameState.log("Dropped: " + i.getName() + " at your feet. (E to pick up)");
     }
 
     static void dropAmmo(int x, int y) {

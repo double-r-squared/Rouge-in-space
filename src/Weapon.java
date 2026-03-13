@@ -83,7 +83,7 @@ public abstract class Weapon {
         double effective = effectiveHitChance(playerClass);
         if (rng.nextDouble() > effective) return 0;
         int variance = (int)(damage * 0.2);
-        int dmg = damage + rng.nextInt(variance * 2 + 1) - variance;
+        int dmg = GameState.player.getAttack() + damage + rng.nextInt(variance * 2 + 1) - variance;   // ATK bonus applied here
         target.takeDamage(dmg);
         return dmg;
     }
