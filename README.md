@@ -2,6 +2,8 @@
 
 A terminal deep-space roguelike.
 
+[gameplay](./assets/screenshot.png)
+
 ## Repo layout
 
 - `src/` — Java source code in a flat layout (`src/*.java`)
@@ -26,12 +28,11 @@ chmod +x ./setup.sh
 ./setup.sh
 cd ..
 
-# 2) Compile to out/
-mkdir -p out
-javac -d out -cp src:src/sqlite-jdbc-3.36.0.3.jar src/*.java
+# 2) Compile
+javac -cp .:src/sqlite-jdbc-3.36.0.3.jar *.java
 
 # 3) Run
-java -cp out:src/sqlite-jdbc-3.36.0.3.jar Game
+java -cp .:src/sqlite-jdbc-3.36.0.3.jar Game
 ```
 
 ## Optional: launch in a new terminal window
