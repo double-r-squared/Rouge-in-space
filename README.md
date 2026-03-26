@@ -2,7 +2,8 @@
 
 A terminal deep-space roguelike.
 
-[gameplay](./assets/screenshot.png)
+## SCREENSHOTS
+[demo](./assets/GAMEPLAY.png)
 
 ## Repo layout
 
