@@ -34,24 +34,6 @@ javac -d out -cp src:src/sqlite-jdbc-3.36.0.3.jar src/*.java
 java -cp out:src/sqlite-jdbc-3.36.0.3.jar Game
 ```
 
-## Quick start (Windows PowerShell)
-
-From the project root:
-
-```powershell
-# 1) Setup from src/ (requires bash via Git Bash or WSL)
-cd src
-bash .\setup.sh
-cd ..
-
-# 2) Compile to out/
-mkdir out -ErrorAction SilentlyContinue
-javac -d out -cp src;src\sqlite-jdbc-3.36.0.3.jar src\*.java
-
-# 3) Run
-java -cp out;src\sqlite-jdbc-3.36.0.3.jar Game
-```
-
 ## Optional: launch in a new terminal window
 
 From the project root:
@@ -72,22 +54,10 @@ Convenient scripts:
 
 - macOS: `scripts/run-new-window.command`
 - Linux: `scripts/run-new-window.sh`
-- Windows: `scripts/run-new-window.bat`
 
 They open a new terminal window and run setup/build/run for you.
 Use the script for your platform (`run-new-window.sh` is Linux-only).
-
-## Tests (JUnit 5)
-
-From the project root:
-
-```bash
-# one-time script permissions
-chmod +x scripts/setup-tests.sh scripts/run-tests.sh
-
-# run tests (first run downloads JUnit into support_files/)
-./scripts/run-tests.sh
-```
+---
 
 If JUnit imports fail in IntelliJ, re-add 
 `support_files/junit-platform-console-standalone-1.10.2.jar` as module dependency with 

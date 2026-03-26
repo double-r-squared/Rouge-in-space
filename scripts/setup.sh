@@ -38,6 +38,7 @@ if [ -f "monsters.db" ]; then
 else
     echo "[ERR] monsters.db not found in current directory."
     echo "Seeding monster.db : sqlite3 monsters.db < seed_monsters.sql"
+    cd ../db
     sqlite3 monsters.db < seed_monsters.sql
     exit 1
 fi
