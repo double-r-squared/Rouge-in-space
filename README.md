@@ -3,7 +3,7 @@
 A terminal deep-space roguelike.
 
 ## SCREENSHOTS
-[demo](./assets/GAMEPLAY.png)
+![demo](./assets/GAMEPLAY.png)
 
 ## Repo layout
 
